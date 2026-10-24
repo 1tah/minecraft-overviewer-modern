@@ -9,6 +9,12 @@ HTTP-сервер запускается отдельно. Для уже раб�
 `4a8c8fa00d3593668a2e31d77538f7597fb4d3e9`, полученный 24 октября 2026.
 Это исходники для Minecraft **Java Edition**, не Bedrock.
 
+Параметры мира, размер карты, примеры ручных маркеров и иконок:
+[CONFIG_RU.md](CONFIG_RU.md). Для новой установки используйте полный архив или
+текущий репозиторий. При установке архива только изменений список `remove` в
+`delivery-manifest.json` перечисляет устаревшие файлы форка для удаления;
+`git apply` выполняет эти удаления вместе с патчем.
+
 ## Что входит в поставку
 
 * `Overviewer-modern-source.zip` — исходники целиком. Распаковать и собрать.
@@ -33,6 +39,8 @@ overviewer_core/tileset.py
 overviewer_core/world.py
 overviewer_core/assetmanager.py
 overviewer_core/settingsDefinition.py
+overviewer_core/aux_files/genPOI.py
+overviewer_core/util.py
 overviewer_core/data/js_src/util.js
 overviewer_core/data/web_assets/overviewer.css
 ```
@@ -48,8 +56,8 @@ overviewer_core/webprogress.py
 ```
 
 Файлы `test/*` и `contrib/verify_modern_render.py` нужны для проверок, а не
-для обычного запуска. Баннер версии в Git-checkout может по-прежнему показывать
-версию базы 26.2; это не перечень поддержанных патчем версий Minecraft.
+для обычного запуска. Версия нашей сборки — `26.3+resume.4`; это номер сборки,
+а не гарантия поддержки произвольных будущих форматов Minecraft.
 В manifest `sha256` относится к байтам файлов архива, `sha256_lf_utf8` — к
 UTF-8-тексту после нормализации CRLF/LF; второе удобно при установке через
 `git apply`, поскольку Git может менять окончания строк.

@@ -51,7 +51,10 @@ def render_key(render, world, texture_files=()):
     scan therefore remain eligible for the next incremental update, including
     chunks outside the saved plan's bounds. A snapshot gives consistent output.
     """
-    options = {k: v for k, v in render.items() if k not in ('changelist', 'renderchecks')}
+    # POI filters are config-defined functions and are not pickleable. They do
+    # not change raster tiles, so editing markers must not invalidate a plan.
+    options = {k: v for k, v in render.items()
+               if k not in ('changelist', 'renderchecks', 'markers', 'manualpois')}
     digest = hashlib.sha256(pickle.dumps(options, protocol=4))
     identity = (world.leveldat.get('RandomSeed'), world.leveldat.get('WorldGenSettings', {}).get('seed'))
     digest.update(repr(identity).encode())

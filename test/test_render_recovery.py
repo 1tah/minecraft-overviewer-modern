@@ -12,8 +12,18 @@ from overviewer_core.files import FileReplacer
 from overviewer_core.memorylimit import run_limited
 from overviewer_core.memorylimit import verify_scope
 from overviewer_core.renderjournal import OutputLock, RenderJournal
+from overviewer_core.renderjournal import render_key
 from overviewer_core.tileset import TileSet
 from test.test_tileset import FakeRegionset, FakeAssetmanager, chunks
+
+
+def test_manual_markers_do_not_break_or_invalidate_raster_resume():
+    from types import SimpleNamespace
+    world = SimpleNamespace(leveldat={'RandomSeed': 42})
+    base = {'world': 'main', 'rendermode': 'normal'}
+    decorated = dict(base, markers=[{'filterFunction': lambda poi: poi.get('name')}],
+                     manualpois=[{'id': 'manual', 'x': 1, 'y': 64, 'z': 2}])
+    assert render_key(base, world) == render_key(decorated, world)
 
 
 def test_resume_does_not_rescan_or_repeat_completed_tiles(tmp_path):

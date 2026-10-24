@@ -1,40 +1,42 @@
-# This is a sample config file, meant to give you an idea of how to format your
-# config file and what's possible.
+# Copy to render_config.py and edit paths. These variables are supplied by Overviewer.
+def manual_marker(poi):
+    """Return a safe popup for a manually configured place."""
+    from html import escape
+    if poi.get('id') == 'manual':
+        name = escape(str(poi.get('name', 'Место')))
+        description = escape(str(poi.get('description', '')))
+        return (name, '<b>' + name + '</b><br>' + description)
 
-# Define the path to your world here. 'My World' in this case will show up as
-# the world name on the map interface. If you change it, be sure to also change
-# the referenced world names in the render definitions below.
-worlds['My World'] = "/path/to/your/world"
 
-# Define where to put the output here.
-outputdir = "/tmp/test_render"
+worlds['CublayCraft'] = '/srv/minecraft/world-snapshot'
+outputdir = '/srv/www/minecraft-map'
+texturepath = '/srv/minecraft/assets/1.21.5.jar'
+webprogress = True
 
-# This is an item usually specified in a renders dictionary below, but if you
-# set it here like this, it becomes the default for all renders that don't
-# define it.
-# Try "smooth_lighting" for even better looking maps!
-rendermode = "lighting"
-
-renders["render1"] = {
-        'world': 'My World',
-        'title': 'A regular render',
-        'dimension': 'overworld',
+renders['overworld'] = {
+    'world': 'CublayCraft', 'dimension': 'overworld', 'title': 'Обычный мир',
+    'rendermode': [Base(), EdgeLines(), SmoothLighting(strength=1)],
+    'defaultzoom': 4,
+    'poititle': 'Места',
+    'markers': [{'name': 'Мои места', 'filterFunction': manual_marker,
+                 'icon': 'markers/marker_home.png', 'checked': True}],
+    # Add your places here; see CONFIG_RU.md for complete examples.
+    'manualpois': [],
 }
-
-# This example is the same as above, but rotated
-renders["render2"] = {
-        'world': 'My World',
-        'northdirection': 'upper-right',
-        'title': 'Upper-right north direction',
-        'dimension': 'overworld',
+renders['nether'] = {
+    'world': 'CublayCraft', 'dimension': 'nether', 'title': 'Нижний мир — срез Y=47',
+    'rendermode': [Base(), EdgeLines(), Nether(), SmoothLighting(strength=0.5), Depth(max=47)],
+    'defaultzoom': 4,
 }
-
-# Here's how to do a nighttime render. Also try "smooth_night" instead of "night"
-renders["render3"] = {
-        'world': 'My World',
-        'title': 'Nighttime',
-        # Notice how this overrides the rendermode default specified above
-        'rendermode': 'night',
-        'dimension': 'overworld',
+renders['end'] = {
+    'world': 'CublayCraft', 'dimension': 'end', 'title': 'Край',
+    'rendermode': [Base(), EdgeLines(), SmoothLighting(strength=0.5)],
+    'defaultzoom': 4,
 }
-
+# For separate Bukkit/Paper worlds, add aliases to worlds and change 'world' above:
+# worlds['CublayCraft-Nether'] = '/srv/minecraft/world_nether'
+# worlds['CublayCraft-End'] = '/srv/minecraft/world_the_end'
+# To reproduce the old Overworld height cut, append Depth(max=254) to its rendermode.
+# Boundaries in blocks: renders['overworld']['crop'] = (-5000, -5000, 5000, 5000)
+# After changing manualpois, run:
+# python overviewer.py --genpoi -c render_config.py --skip-scan --skip-players -p 1

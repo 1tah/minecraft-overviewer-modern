@@ -1,7 +1,0 @@
-#!/bin/sh
-
-# Set the path to the overviewer executable
-OVERVIEWER="$APPDIR/overviewer/overviewer"
-
-# Pass all arguments to the overviewer executable
-exec "$OVERVIEWER" "$@"

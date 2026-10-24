@@ -4,10 +4,14 @@ include CONTRIBUTORS.rst
 include overviewer.py
 include contribManager.py
 include sample_config.py
+include example_config.py
+include README.md
+include CONFIG_RU.md
+include BUILD_AND_RUN_RU.md
+include WSL_RUN_RU.md
+include ANALYSIS_RU.md
 recursive-include overviewer_core *.py
 recursive-include overviewer_core/src *.c *.h
 recursive-include overviewer_core/src/primitives *.c *.h
 recursive-include overviewer_core/data *
 recursive-include contrib *.py
-recursive-include docs *
-prune docs/_build

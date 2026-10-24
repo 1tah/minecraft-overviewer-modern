@@ -243,8 +243,7 @@ overviewer.util = {
 
         overviewer.map = L.map('mcmap', {crs: L.CRS.Simple});
 
-        overviewer.map.attributionControl.setPrefix(
-            '<a href="https://leafletjs.com/">Leaflet</a>');
+        overviewer.map.attributionControl.setPrefix(false);
 
         if (overviewerConfig['map']['attribution'] != null) {
             overviewer.map.attributionControl.addAttribution(overviewerConfig['map']['attribution']);

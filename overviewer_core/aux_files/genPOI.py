@@ -333,8 +333,11 @@ def handleManual(manualpois, filters, markers):
     This function will not return anything, but it will update the parameter
     `markers`.
     """
+    # A group is registered for both terrain and entity region sets (and each
+    # crop). Manual places belong to the render, so visit each group only once.
+    unique_filters = {entry[0]: entry for entry in filters}.values()
     for poi in manualpois:
-        for name, __, filter_function, __, __, __ in filters:
+        for name, __, filter_function, __, __, __ in unique_filters:
             result = filter_function(poi)
             if result:
                 d = create_marker_from_filter_result(poi, result)

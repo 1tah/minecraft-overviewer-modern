@@ -193,6 +193,7 @@ div.worldcontrol select {
     line-height: 1.5;
 }
 .ov-progress-label { overflow-wrap: anywhere; }
+.leaflet-control-attribution:empty { display: none; }
 .ov-progress-bar { display: block; width: 100%; height: 6px; margin-top: 3px; accent-color: #3498db; }
 
 
