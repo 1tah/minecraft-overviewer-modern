@@ -74,6 +74,10 @@ overviewer.util = {
                 this.progress.setAttribute('role', 'status');
                 this.progress.setAttribute('aria-live', 'polite');
                 this.label = L.DomUtil.create('div', 'ov-progress-label', this.progress);
+                var heading = L.DomUtil.create('div', 'ov-progress-heading', this.label);
+                this.title = L.DomUtil.create('span', 'ov-progress-title', heading);
+                this.counts = L.DomUtil.create('span', 'ov-progress-counts', heading);
+                this.details = L.DomUtil.create('div', 'ov-progress-details', this.label);
                 this.bar = L.DomUtil.create('progress', 'ov-progress-bar', this.progress);
                 this.bar.max = 100;
                 this.progress.style.visibility = 'hidden';
@@ -103,7 +107,12 @@ overviewer.util = {
                         var view = overviewer.util.formatRenderProgress(data, world, path, Date.now()/1000, this.previousProgress);
                         this.previousProgress = {run_id: data.run_id, renders: data.renders,
                                                  current_render: view.current};
-                        this.label.textContent = view.message;
+                        this.title.textContent = view.title || view.message;
+                        this.counts.textContent = view.counts || '';
+                        this.details.textContent = view.details || '';
+                        this.details.style.display = view.details ? '' : 'none';
+                        this.label.setAttribute('aria-label', view.message);
+                        this.label.title = view.message;
                         this.progress.style.visibility = '';
                         this.bar.style.display = view.showBar === false ? 'none' : '';
                         if (view.percent == null) {this.bar.removeAttribute('value');}
@@ -862,6 +871,12 @@ overviewer.util = {
      * @param string pathBase
      * @param string pathExt
      */
+    'formatRemainingTime': function(seconds) {
+        if (!Number.isFinite(seconds)) {return '—';}
+        var minutes = Math.ceil(Math.max(0, seconds)/60);
+        if (minutes < 60) {return '~'+minutes+' мин';}
+        return '~'+String(Math.floor(minutes/60)).padStart(2, '0')+':'+String(minutes%60).padStart(2, '0');
+    },
     'formatRenderProgress': function(data, world, path, now, previous) {
         if (data.version !== 2) {return {message: String(data.message || ''), percent: null, stale: false};}
         var stale = ['preparing', 'rendering'].indexOf(data.status) >= 0 && now-data.updated_at > 90;
@@ -906,25 +921,40 @@ overviewer.util = {
         } else if (!stale && resources.memory_peak_bytes > 0) {
             resourceText += ' · Пик RAM '+gib(resources.memory_peak_bytes)+' ГиБ';
         }
-        if (!data.config_ready) {return {message: prefix+phase+resourceText, percent: null, stale: stale};}
+        var number = function(value) {return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');};
+        var compact = function(view) {
+            view.title = stale ? phase : data.status === 'complete' ? (total ? 'Готово' : 'Карта актуальна') :
+                data.status === 'rendering' && target ? target : phase;
+            view.counts = data.config_ready && total ? number(done)+' / '+number(total)+' · '+percent.toFixed(1)+'%' : '';
+            var parts = [];
+            if (data.status === 'complete' && !total) {parts.push('Изменений для рендера нет');}
+            if (active && data.config_ready && remaining > 0) {
+                parts.push(number(remaining)+' тайлов осталось');
+                if (data.status === 'rendering') {parts.push('Осталось '+overviewer.util.formatRemainingTime(eta));}
+            }
+            if (resourceText) {parts.push(resourceText.slice(3).replace(' (запуск ', ' (+'));}
+            view.details = parts.join(' · ');
+            return view;
+        };
+        if (!data.config_ready) {return compact({message: prefix+phase+resourceText, percent: null, stale: stale});}
         if (data.status === 'complete') {
             if (total === 0) {
-                return {message: 'Карта актуальна · Изменений для рендера нет'+resourceText,
-                        percent: 100, stale: false, showBar: false};
+                return compact({message: 'Карта актуальна · Изменений для рендера нет'+resourceText,
+                        percent: 100, stale: false, showBar: false});
             }
-            return {message: prefix+'Готово: '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)'+resourceText,
-                    percent: percent, stale: false, showBar: false};
+            return compact({message: prefix+'Готово: '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)'+resourceText,
+                    percent: percent, stale: false, showBar: false});
         }
         if (target) {phase = phase === 'Рендер' ? 'Активный слой: '+target : phase+' · Слой: '+target;}
         var message = prefix+phase+' · Готово '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)';
         if (remaining > 0) {
             message += ' · Осталось '+remaining+' тайлов';
             if (!stale && data.status === 'rendering') {
-                message += ' · Осталось '+(eta == null ? '—' : '~'+Math.ceil(eta/60)+' мин');
+                message += ' · Осталось '+overviewer.util.formatRemainingTime(eta);
             }
         }
-        return {message: message+resourceText, percent: percent, stale: stale, current: current,
-                showBar: !stale && data.status === 'rendering' && remaining > 0};
+        return compact({message: message+resourceText, percent: percent, stale: stale, current: current,
+                showBar: !stale && data.status === 'rendering' && remaining > 0});
     },
     'getTileUrlGenerator': function(path, pathBase, pathExt) {
         return function(o) {
