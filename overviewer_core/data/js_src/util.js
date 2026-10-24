@@ -877,6 +877,15 @@ overviewer.util = {
         if (minutes < 60) {return '~'+minutes+' мин';}
         return '~'+String(Math.floor(minutes/60)).padStart(2, '0')+':'+String(minutes%60).padStart(2, '0');
     },
+    'formatElapsedTime': function(seconds) {
+        if (!Number.isFinite(seconds) || seconds < 0) {return '';}
+        var elapsed = Math.round(seconds);
+        var minutes = Math.floor(elapsed/60), rest = elapsed%60;
+        if (minutes >= 60) {
+            return String(Math.floor(minutes/60)).padStart(2, '0')+':'+String(minutes%60).padStart(2, '0')+':'+String(rest).padStart(2, '0');
+        }
+        return (minutes ? minutes+' мин ' : '')+rest+' с';
+    },
     'formatRenderProgress': function(data, world, path, now, previous) {
         if (data.version !== 2) {return {message: String(data.message || ''), percent: null, stale: false};}
         var stale = ['preparing', 'rendering'].indexOf(data.status) >= 0 && now-data.updated_at > 90;
@@ -923,16 +932,23 @@ overviewer.util = {
         }
         var number = function(value) {return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');};
         var compact = function(view) {
-            view.title = stale ? phase : data.status === 'complete' ? (total ? 'Готово' : 'Карта актуальна') :
+            view.title = stale ? phase : data.status === 'complete' ? (total ? 'Рендер завершён' : 'Карта актуальна') :
                 data.status === 'rendering' && target ? target : phase;
-            view.counts = data.config_ready && total ? number(done)+' / '+number(total)+' · '+percent.toFixed(1)+'%' : '';
+            view.counts = data.config_ready && total ? number(done)+' из '+number(total)+' тайлов · '+percent.toFixed(1)+'%' : '';
             var parts = [];
             if (data.status === 'complete' && !total) {parts.push('Изменений для рендера нет');}
+            if (data.status === 'complete' && total) {
+                var duration = overviewer.util.formatElapsedTime(data.elapsed_seconds);
+                if (duration) {parts.push('Время рендера '+duration);}
+            }
             if (active && data.config_ready && remaining > 0) {
                 parts.push(number(remaining)+' тайлов осталось');
                 if (data.status === 'rendering') {parts.push('Осталось '+overviewer.util.formatRemainingTime(eta));}
             }
             if (resourceText) {parts.push(resourceText.slice(3).replace(' (запуск ', ' (+'));}
+            if (data.status === 'complete' && total && resources.workers_peak > 0) {
+                parts.push('Воркеры: до '+resources.workers_peak);
+            }
             view.details = parts.join(' · ');
             return view;
         };

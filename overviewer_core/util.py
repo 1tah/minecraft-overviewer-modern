@@ -25,7 +25,7 @@ from itertools import cycle, islice, product
 from string import hexdigits
 from subprocess import PIPE, Popen
 
-DEFAULT_VERSION = "26.3+resume.8"
+DEFAULT_VERSION = "26.3+resume.9"
 
 DIMENSION_INFO = {
     "minecraft:overworld": ("minecraft:overworld", 0, "minecraft:overworld"),
