@@ -863,34 +863,45 @@ overviewer.util = {
     'formatRenderProgress': function(data, world, path, now) {
         if (data.version !== 2) {return {message: String(data.message || ''), percent: null, stale: false};}
         var stale = ['preparing', 'rendering'].indexOf(data.status) >= 0 && now-data.updated_at > 90;
-        var rows = (data.renders || []).filter(function(row) {return row.world === world && (!path || row.id === path);});
         var total = data.total, done = data.done, eta = data.eta_seconds;
-        var skipped = false;
-        if (rows.length) {
-            total = 0; done = 0;
-            var performed = 0;
-            skipped = rows.every(function(row) {return row.skipped;});
-            rows.forEach(function(row) {total += row.total; done += row.done; performed += row.done-row.initial_done;});
-            eta = performed > 0 ? data.elapsed_seconds*Math.max(0,total-done)/performed : (done === total ? 0 : null);
-        }
+        // Always describe the whole run, even when the visible layer has no jobs.
+        var groups = new Map();
+        (data.renders || []).filter(function(row) {
+            return !row.skipped && row.done < row.total;
+        }).forEach(function(row) {
+            var name = row.world || 'Мир';
+            if (!groups.has(name)) {groups.set(name, []);}
+            var titles = groups.get(name);
+            var title = row.title || row.id;
+            if (titles.indexOf(title) < 0) {titles.push(title);}
+        });
+        var targets = Array.from(groups, function(group) {
+            return group[0] + ' — ' + group[1].join(', ');
+        }).join('; ');
         var remaining = Math.max(0, total-done);
         var percent = total ? Math.min(100,100*done/total) : 100;
         var phase = data.phase;
         if (stale) {phase = 'Нет обновлений — возможно, рендер прерван';}
-        else if (skipped) {phase = 'Пропущено';}
-        else if (data.status === 'rendering' && remaining === 0) {phase = 'Готово';}
-        var prefix = world ? world + ' · ' : '';
+        var prefix = 'Общий рендер · ';
         if (!data.config_ready) {return {message: prefix+phase, percent: null, stale: stale};}
-        if (!stale && !skipped && (data.status === 'complete' ||
-            (data.status === 'rendering' && remaining === 0))) {
+        if (data.status === 'complete') {
+            if (total === 0) {
+                return {message: 'Карта актуальна · Изменений для рендера нет',
+                        percent: 100, stale: false, showBar: false};
+            }
             return {message: prefix+'Готово: '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)',
                     percent: percent, stale: false, showBar: false};
         }
-        var message = prefix+phase+' · Готово '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)'+
-                      ' · Осталось '+remaining+' тайлов · Осталось '+
-                      (eta == null ? '—' : '~'+Math.ceil(eta/60)+' мин');
+        if (targets) {phase = phase === 'Рендер' ? 'Сейчас: '+targets : phase+' · Слои: '+targets;}
+        var message = prefix+phase+' · Готово '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)';
+        if (remaining > 0) {
+            message += ' · Осталось '+remaining+' тайлов';
+            if (!stale && data.status === 'rendering') {
+                message += ' · Осталось '+(eta == null ? '—' : '~'+Math.ceil(eta/60)+' мин');
+            }
+        }
         return {message: message, percent: percent, stale: stale,
-                showBar: !stale && data.status === 'rendering' && !skipped};
+                showBar: !stale && data.status === 'rendering' && remaining > 0};
     },
     'getTileUrlGenerator': function(path, pathBase, pathExt) {
         return function(o) {
