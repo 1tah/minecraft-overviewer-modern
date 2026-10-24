@@ -107,6 +107,7 @@ def get_default_config():
     conf['outputdir'] = Setting(required=True, validator=validateOutputDir, default=None)
 
     conf['processes'] = Setting(required=True, validator=int, default=-1)
+    conf['webprogress'] = Setting(required=False, validator=validateBool, default=True)
 
     # TODO clean up this ugly in sys.argv hack
     if platform.system() == 'Windows' or not sys.stdout.isatty() or "--simple" in sys.argv:

@@ -44,12 +44,14 @@ from overviewer_core import cache
 from overviewer_core import observer
 from overviewer_core.nbt import CorruptNBTError
 from overviewer_core.renderjournal import render_key
+from overviewer_core.webprogress import WebProgress, manage_lifecycle, register as register_web_progress
 
 helptext = """
 %(prog)s [--rendermodes=...] [options] <World> <Output Dir>
 %(prog)s --config=<config file> [options]"""
 
 
+@manage_lifecycle
 def main():
     # bootstrap the logger with defaults
     logger.configure()
@@ -511,7 +513,13 @@ def main():
     # create our asset manager... ASSMAN
     from overviewer_core.renderjournal import OutputLock
     output_lock = OutputLock(destdir)
+    live = None
+    if config.get('webprogress', True) and not args.update_web_assets and not args.estimatedirtytiles:
+        live = WebProgress(destdir)
+        register_web_progress(live)
     assetMrg = assetmanager.AssetManager(destdir, config.get('customwebassets', None), config.get('attribution', None))
+    if live:
+        assetMrg.live_revision = live.run_id
 
     # If we've been asked to update web assets, do that and then exit
     if args.update_web_assets:
@@ -572,6 +580,8 @@ def main():
             if not args.estimatedirtytiles:
                 # If we're not going to do a render, no point in doing a time-consuming texture generation.
                 logging.info("Generating textures...")
+                if live:
+                    live.stage('Подготовка текстур')
                 tex.generate()
                 logging.debug("Finished generating textures.")
             texcache[texopts_key] = tex
@@ -651,6 +661,8 @@ def main():
 
     # Do tileset preprocessing here, before we start dispatching jobs
     logging.info("Preprocessing...")
+    if live:
+        live.stage('Анализ мира и подготовка плана тайлов')
     for ts in tilesets:
         ts.do_preprocessing()
 
@@ -661,6 +673,8 @@ def main():
 
     # Output initial static data and configuration
     assetMrg.initialize(tilesets)
+    if live:
+        live.begin(tilesets)
 
     # multiprocessing dispatcher
     if config['processes'] == 1:
@@ -668,6 +682,7 @@ def main():
     else:
         dispatch = dispatcher.MultiprocessingDispatcher(
             local_procs=config['processes'])
+    dispatch.web_progress = live
     try:
         dispatch.render_all(tilesets, config['observer'])
         dispatch.close()
@@ -684,9 +699,13 @@ def main():
             ts.journal.close()
         raise
 
+    if live:
+        live.stage('Сохранение карты')
     assetMrg.finalize(tilesets)
     for ts in tilesets:
         ts.finish_journal()
+    if live:
+        live.stop('complete')
 
     for out in changelists.values():
         logging.debug("Closing %s (%s).", out, out.fileno())

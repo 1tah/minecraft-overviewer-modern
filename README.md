@@ -1,3 +1,105 @@
+# Minecraft Overviewer: новые блоки, продолжение рендера и веб-прогресс
+
+Исходники на базе GregoryAM-SP/The-Minecraft-Overviewer. Проверены рендер миров
+Java Edition 1.21.5, модели из клиентских JAR 26.3 и 26.4-snapshot-5, восстановление
+после остановки и лимит RAM в Ubuntu WSL2. Будущие версии с совместимым форматом
+моделей поддерживаются автоматически; специальные модели могут требовать доработки.
+
+## Скачать, собрать и запустить в Ubuntu / WSL2
+
+Репозиторий приватный: используйте свой вход GitHub для клонирования либо
+**Code → Download ZIP** и откройте распакованный каталог в Ubuntu.
+В WSL храните исходники, копию мира и результат в `/home/имя`, чтобы избежать
+медленной работы через OneDrive и `/mnt/c`.
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git build-essential python3-dev python3-venv unzip
+git clone https://github.com/1tah/minecraft-overviewer-modern.git
+cd minecraft-overviewer-modern
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install 'setuptools==80.9.0' 'numpy==2.3.5' 'Pillow==12.3.0' requests networkx
+git clone --depth 1 --branch 12.3.0 https://github.com/python-pillow/Pillow.git ../overviewer-pillow-headers
+export PIL_INCLUDE_DIR="$(cd ../overviewer-pillow-headers/src/libImaging && pwd)"
+python setup.py build
+cp example_config.py render_config.py
+nano render_config.py
+```
+
+В конфиге укажите путь к **копии мира**, каталогу результата и официальному
+**клиентскому** JAR вашей версии Minecraft. В примере все измерения находятся
+в одном обычном сохранении. Для Paper/Bukkit с отдельными `world_nether` и
+`world_the_end` в конце примера показаны дополнительные записи `worlds`:
+поменяйте также поле `world` у соответствующего рендера.
+`Depth(max=47)` в Nether убирает крышу, как на вашей прежней карте.
+Для Overworld высота не обрезана; старый срез Y=254 можно вернуть через `Depth`.
+
+Запустите рендер из каталога исходников:
+
+```bash
+source .venv/bin/activate
+python overviewer.py -c render_config.py -p 4 --memory-limit 4G
+```
+
+`-p 4` — четыре рабочих процесса. `--memory-limit 4G` — общий предел памяти
+группы рендера, включая рабочих, с отключённым swap этой группы. Нужны cgroup v2
+и работающий systemd не ниже 254; проверено на Ubuntu 26.04 WSL2.
+При нехватке памяти завершится группа рендера; увеличьте лимит либо уменьшите
+`-p` и запустите **ту же команду**. Журнал продолжит сохранённый план.
+Первоначальный анализ до создания плана при прерывании выполняется повторно.
+Не используйте `--forcerender` для обычного продолжения.
+
+## Смотреть карту во время генерации
+
+Второй терминал Ubuntu (укажите **тот же outputdir**, что в конфиге):
+
+```bash
+cd ~/minecraft-overviewer-modern
+mkdir -p "$HOME/minecraft-map"
+.venv/bin/python -m http.server 8080 --bind 127.0.0.1 --directory "$HOME/minecraft-map"
+```
+
+Замените outputdir в конфиге на полный путь `/home/ваш_пользователь/minecraft-map`.
+Откройте **http://localhost:8080/** в Windows или Ubuntu.
+Overviewer создаёт сайт, а HTTP-сервер раздаёт его: оба процесса должны работать
+одновременно, чтобы видеть генерацию. Для публичного домена раздавайте outputdir
+через свой Nginx/Apache; встроенный сервер по этой команде доступен локально.
+
+При первом рендере сначала виден экран подготовки текстур и анализа мира.
+Затем открывается карта и строка состояния выбранного мира/слоя:
+
+```text
+CublayCraft-Nether · Рендер · Готово 7599 из 229780 тайлов (3.3%) · Осталось 222181 тайлов · Осталось ~222 мин
+```
+
+Состояние опрашивается каждые 2 секунды, тайлы обновляются примерно раз в
+15 секунд и по завершении. До создания обзорных тайлов часть карты может быть
+пустой; готовые подробные участки появляются по мере рендера. ETA приблизительное,
+до первых завершённых тайлов показывается «—». Счётчик включает подробные и
+обзорные тайлы текущего плана, поэтому не равен числу чанков.
+После обычного прерывания показывается «Прервано», после ошибки — «Ошибка»;
+при аварийном убийстве процесса через 90 секунд без heartbeat появляется
+«Нет обновлений — возможно, рендер прерван». После завершения сайт остаётся
+доступным, пока работает HTTP-сервер. Параметр `webprogress = False` отключает статус.
+
+Если Nginx/CDN кэширует всё, отключите кэш для `/render-progress.json`,
+`/index.html` и корня сайта; для JS/CSS и тайлов учитывайте query string.
+Для долгого рендера запускайте его в `tmux` или службе: закрытие SSH/Ubuntu-терминала
+может остановить запущенные в нём процессы.
+
+Подробности: [сборка и ограничения](BUILD_AND_RUN_RU.md),
+[проверенный запуск WSL](WSL_RUN_RU.md), [анализ исходников](ANALYSIS_RU.md),
+[пример конфигурации](example_config.py). Лицензия — [GPL](COPYING.txt).
+За основу взяты [оригинальный Overviewer](https://github.com/overviewer/Minecraft-Overviewer)
+и [форк GregoryAM-SP](https://github.com/GregoryAM-SP/The-Minecraft-Overviewer).
+
+---
+
+Ниже сохранена исходная документация форка. Для этой доработанной версии
+используйте команды выше и русскую инструкцию.
+
 ![Overviewer](https://gregoryam.com/assets/img/assets/overviewer-thumbnail.webp)
 [![Unit tests](https://github.com/GregoryAM-SP/The-Minecraft-Overviewer/actions/workflows/ci.yml/badge.svg)](https://github.com/GregoryAM-SP/The-Minecraft-Overviewer/actions/workflows/ci.yml)
 <br><strong>Works with Minecraft Java Edition v1.2.1 - v26.2</strong>

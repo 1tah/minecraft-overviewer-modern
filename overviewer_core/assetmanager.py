@@ -127,6 +127,7 @@ top-level directory.
         dump['map'] = dict()
         dump['map']['debug'] = False
         dump['map']['cacheTag'] = str(int(time.time()))
+        dump['map']['renderRevision'] = getattr(self, 'live_revision', None)
         dump['map']['north_direction'] = 'lower-left'   # only temporary
         dump['map']['controls'] = {
             'pan': True,
@@ -202,14 +203,14 @@ top-level directory.
             js_src = os.path.join(util.get_program_path(), "js_src")
         with FileReplacer(os.path.join(self.outputdir, "overviewer.js"),
                           capabilities=self.fs_caps) as tmpfile:
-            with open(tmpfile, "w") as fout:
+            with open(tmpfile, "w", encoding='utf-8') as fout:
                 # first copy in js_src/overviewer.js
-                with open(os.path.join(js_src, "overviewer.js"), 'r') as f:
+                with open(os.path.join(js_src, "overviewer.js"), 'r', encoding='utf-8') as f:
                     fout.write(f.read())
                 # now copy in the rest
                 for js in os.listdir(js_src):
                     if not js.endswith("overviewer.js") and js.endswith(".js"):
-                        with open(os.path.join(js_src, js)) as f:
+                        with open(os.path.join(js_src, js), encoding='utf-8') as f:
                             fout.write(f.read())
 
         # Add time and version in index.html
@@ -221,6 +222,9 @@ top-level directory.
         versionstr = "%s (%s)" % (util.findGitTag(),
                                   util.findGitHash()[:7])
         index = index.replace("{version}", versionstr)
+        revision = getattr(self, 'live_revision', None) or str(time.time_ns())
+        for filename in ('overviewerConfig.js', 'overviewer.js', 'overviewer.css'):
+            index = index.replace('"' + filename + '"', '"' + filename + '?v=' + revision + '"')
 
         with FileReplacer(indexpath, capabilities=self.fs_caps) as indexpath:
             with codecs.open(indexpath, 'w', encoding='UTF-8') as output:

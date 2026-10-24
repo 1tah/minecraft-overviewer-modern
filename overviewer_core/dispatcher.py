@@ -67,6 +67,7 @@ class Dispatcher:
         # list of (tileset, workitem, dependencies) tuples
         # keeps track of jobs waiting to run after dependencies finish
         self._pending_jobs = []
+        self.web_progress = None
 
     def render_all(self, tilesetlist, observer):
         """Render all of the tilesets in the given
@@ -147,6 +148,8 @@ class Dispatcher:
             callback = getattr(job[0], 'work_completed', None)
             if callback:
                 callback(job[1])
+            if self.web_progress is not None:
+                self.web_progress.completed(job[0])
             self._running_jobs.remove(job)
         for job in dispatched_jobs:
             self._pending_jobs.remove(job)

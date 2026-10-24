@@ -70,34 +70,61 @@ overviewer.util = {
                 position: 'bottomright'
             },
             initialize: function() {
-                this.progress = L.DomUtil.create("div", "progress");
-                this.progress.innerHTML = 'Current render progress';
+                this.progress = L.DomUtil.create("div", "progress ov-live-progress");
+                this.progress.setAttribute('role', 'status');
+                this.progress.setAttribute('aria-live', 'polite');
+                this.label = L.DomUtil.create('div', 'ov-progress-label', this.progress);
+                this.bar = L.DomUtil.create('progress', 'ov-progress-bar', this.progress);
+                this.bar.max = 100;
                 this.progress.style.visibility = 'hidden';
+                this.lastTileRefresh = 0;
+                this.lastTileSignature = null;
             },
             update: function() {
-                fetch("progress.json")
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Response was not ok');
-                        }
+                var nextPoll = 2000;
+                var get = function(path) {
+                    return fetch(path + '?t=' + Date.now(), {cache: 'no-store'}).then(function(response) {
+                        if (!response.ok) {throw new Error('Progress unavailable');}
                         return response.json();
-                    })
+                    });
+                };
+                get('render-progress.json').catch(function() {return get('progress.json');})
                     .then(data => {
-                        this.progress.innerHTML = data.message;
-                        if (data.update > 0) {
-                            setTimeout(this.update.bind(this), data.update);
-                            this.progress.style.visibility = '';
-                        } else {
-                            setTimeout(this.update.bind(this), 60000);
-                            this.progress.innerHTML = 'Hidden - data.update < 0';
-                            this.progress.style.visibility = 'hidden';
+                        if (data.version === 2 && data.config_ready && data.run_id &&
+                            overviewerConfig.map.renderRevision !== data.run_id) {
+                            var target = new URL(window.location.href);
+                            target.searchParams.set('_render', data.run_id);
+                            window.location.replace(target.href);
+                            return;
+                        }
+                        var world = overviewer.current_world;
+                        var layer = overviewer.current_layer[world];
+                        var path = layer && layer.tileSetConfig ? layer.tileSetConfig.path : null;
+                        var view = overviewer.util.formatRenderProgress(data, world, path, Date.now()/1000);
+                        this.label.textContent = view.message;
+                        this.progress.style.visibility = '';
+                        if (view.percent == null) {this.bar.removeAttribute('value');}
+                        else {this.bar.value = view.percent;}
+                        nextPoll = Math.max(1000, Math.min(10000, Number(data.update) || 2000));
+                        var signature = data.run_id + ':' + data.sequence + ':' + data.status;
+                        var finished = ['complete', 'error', 'interrupted'].indexOf(data.status) >= 0;
+                        if (data.version === 2 && data.config_ready && !view.stale &&
+                            signature !== this.lastTileSignature &&
+                            (finished || Date.now()-this.lastTileRefresh >= 15000)) {
+                            overviewerConfig.map.liveTileVersion = signature;
+                            overviewer.map.eachLayer(function(current) {
+                                if (typeof current.redraw === 'function') {current.redraw();}
+                            });
+                            this.lastTileRefresh = Date.now();
+                            this.lastTileSignature = signature;
                         }
                     })
                     .catch(error => {
-                        this.progress.innerHtml = 'Hidden - no data';
-                        this.progress.style.visibility = 'hidden';
-                        console.info('Error getting progress; hiding control', error);
-                    });
+                        this.label.textContent = 'Статус временно недоступен — повторное подключение…';
+                        this.progress.style.visibility = '';
+                        nextPoll = 5000;
+                    })
+                    .finally(() => {this.timer = setTimeout(this.update.bind(this), nextPoll);});
             },
             onAdd: function() {
                 // Not all browsers may have this
@@ -105,6 +132,9 @@ overviewer.util = {
                     setTimeout(this.update.bind(this), 0);
                 }
                 return this.progress;
+            },
+            onRemove: function() {
+                clearTimeout(this.timer);
             }
         });
         overviewer.compassClass = L.Control.extend({
@@ -830,6 +860,32 @@ overviewer.util = {
      * @param string pathBase
      * @param string pathExt
      */
+    'formatRenderProgress': function(data, world, path, now) {
+        if (data.version !== 2) {return {message: String(data.message || ''), percent: null, stale: false};}
+        var stale = ['preparing', 'rendering'].indexOf(data.status) >= 0 && now-data.updated_at > 90;
+        var rows = (data.renders || []).filter(function(row) {return row.world === world && (!path || row.id === path);});
+        var total = data.total, done = data.done, eta = data.eta_seconds;
+        var skipped = false;
+        if (rows.length) {
+            total = 0; done = 0;
+            var performed = 0;
+            skipped = rows.every(function(row) {return row.skipped;});
+            rows.forEach(function(row) {total += row.total; done += row.done; performed += row.done-row.initial_done;});
+            eta = performed > 0 ? data.elapsed_seconds*Math.max(0,total-done)/performed : (done === total ? 0 : null);
+        }
+        var remaining = Math.max(0, total-done);
+        var percent = total ? Math.min(100,100*done/total) : 100;
+        var phase = data.phase;
+        if (stale) {phase = 'Нет обновлений — возможно, рендер прерван';}
+        else if (skipped) {phase = 'Пропущено';}
+        else if (data.status === 'rendering' && remaining === 0) {phase = 'Готово';}
+        var prefix = world ? world + ' · ' : '';
+        if (!data.config_ready) {return {message: prefix+phase, percent: null, stale: stale};}
+        var message = prefix+phase+' · Готово '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)'+
+                      ' · Осталось '+remaining+' тайлов · Осталось '+
+                      (eta == null ? '—' : '~'+Math.ceil(eta/60)+' мин');
+        return {message: message, percent: percent, stale: stale};
+    },
     'getTileUrlGenerator': function(path, pathBase, pathExt) {
         return function(o) {
             var url = path;
@@ -850,6 +906,9 @@ overviewer.util = {
             url = url + '.' + pathExt;
             if(typeof overviewerConfig.map.cacheTag !== 'undefined') {
                 url += '?c=' + overviewerConfig.map.cacheTag;
+            }
+            if (overviewerConfig.map.liveTileVersion) {
+                url += (url.indexOf('?') >= 0 ? '&' : '?') + 'live=' + encodeURIComponent(overviewerConfig.map.liveTileVersion);
             }
             return(urlBase + url);
         };

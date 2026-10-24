@@ -180,6 +180,21 @@ div.worldcontrol select {
     margin-top:-50%;
 }
 
+.leaflet-container .ov-live-progress {
+    box-sizing: border-box;
+    width: min(940px, calc(100vw - 22px));
+    max-width: calc(100vw - 22px);
+    padding: 4px 8px;
+    margin: 3px 8px;
+    border: 1px solid #888;
+    border-radius: 4px;
+    background: rgba(245, 245, 245, 0.94);
+    color: #222;
+    line-height: 1.5;
+}
+.ov-progress-label { overflow-wrap: anywhere; }
+.ov-progress-bar { display: block; width: 100%; height: 6px; margin-top: 3px; accent-color: #3498db; }
+
 
 div.ov-marker-legend {
     display: inline-block;

@@ -107,6 +107,7 @@ class RenderJournal:
             self.db.execute('DELETE FROM jobs')
             self.db.executemany('INSERT INTO jobs(path) VALUES (?)',
                                 (("".join(map(str, path)),) for path, deps in items))
+            metadata = dict(metadata, jobs_total=self.db.execute('SELECT count(*) FROM jobs').fetchone()[0])
             self.db.execute('INSERT INTO metadata VALUES (?, ?)', ('plan', json.dumps(metadata)))
 
     def pending(self):

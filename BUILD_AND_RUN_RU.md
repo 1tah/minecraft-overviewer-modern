@@ -1,5 +1,10 @@
 # Сборка и запуск доработанного Overviewer
 
+Быстрый запуск, пример конфигурации и просмотр карты во время генерации:
+[README.md](README.md). Веб-прогресс включён по умолчанию (`webprogress = True`),
+HTTP-сервер запускается отдельно. Для уже работающего Nginx достаточно раздавать
+тот же outputdir; отключите кэш для `render-progress.json`, index.html и корня сайта.
+
 База: GregoryAM-SP/The-Minecraft-Overviewer, commit
 `4a8c8fa00d3593668a2e31d77538f7597fb4d3e9`, полученный 24 октября 2026.
 Это исходники для Minecraft **Java Edition**, не Bedrock.
@@ -12,8 +17,8 @@
 * `ANALYSIS_RU.md` — сравнение репозиториев, устройство доработок и границы проверки.
 
 Достаточно взять **именно указанную ревизию форка** и распаковать поверх неё
-`Overviewer-changed-files.zip`. C-файлы не менялись: заменяются шесть Python-файлов,
-добавляются четыре модуля и вспомогательные проверки. Полный список — в
+`Overviewer-changed-files.zip`. C-файлы не менялись: заменяются Python-файлы,
+JS/CSS веб-карты, добавляются пять модулей и вспомогательные проверки. Полный список — в
 `delivery-manifest.json`. Для другой ревизии форка необходимо проверить diff,
 поскольку простая замена файлов может затереть изменения автора.
 
@@ -26,6 +31,10 @@ overviewer_core/files.py
 overviewer_core/textures.py
 overviewer_core/tileset.py
 overviewer_core/world.py
+overviewer_core/assetmanager.py
+overviewer_core/settingsDefinition.py
+overviewer_core/data/js_src/util.js
+overviewer_core/data/web_assets/overviewer.css
 ```
 
 Обязательные новые модули:
@@ -35,6 +44,7 @@ overviewer_core/memorylimit.py
 overviewer_core/renderjournal.py
 overviewer_core/resource_models.py
 overviewer_core/tilelayout.py
+overviewer_core/webprogress.py
 ```
 
 Файлы `test/*` и `contrib/verify_modern_render.py` нужны для проверок, а не

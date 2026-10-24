@@ -49,6 +49,7 @@ overviewer_core/data/stylesheet_src/*.css.map
 ImagingUtils.h
 
 *_CONFIG.PY
+!example_config.py
 
 # Python Virtual Environment
 .venv
