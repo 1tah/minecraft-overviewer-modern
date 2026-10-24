@@ -35,6 +35,10 @@ class CgroupMemory:
     def usage(self):
         return int((self.path/('memory.current' if self.v2 else 'memory.usage_in_bytes')).read_text())
 
+    def peak_usage(self):
+        path = self.path/('memory.peak' if self.v2 else 'memory.max_usage_in_bytes')
+        return int(path.read_text()) if path.exists() else self.usage()
+
 
 def worker_rss(pid):
     try:
@@ -278,6 +282,12 @@ class AdaptiveDispatcher(Dispatcher):
         if self.state:
             atomic_json(self.state, report)
         return report
+
+    def resource_snapshot(self):
+        slots = list(self.slots)
+        return dict(workers_current=sum(s['ready'] and not s['closing'] for s in slots),
+                    workers_busy=sum(s['job'] is not None for s in slots),
+                    workers_starting=sum(not s['ready'] for s in slots), worker_limit=self.maximum)
 
     def close(self):
         self.closed = True

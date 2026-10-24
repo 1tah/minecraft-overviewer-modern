@@ -891,13 +891,28 @@ overviewer.util = {
         var phase = data.phase;
         if (stale) {phase = 'Нет обновлений — возможно, рендер прерван';}
         var prefix = 'Общий рендер · ';
-        if (!data.config_ready) {return {message: prefix+phase, percent: null, stale: stale};}
+        var resources = data.resources || {};
+        var resourceText = '';
+        var active = !stale && ['preparing', 'rendering'].indexOf(data.status) >= 0;
+        var gib = function(bytes) {return (bytes/1073741824).toFixed(1);};
+        if (active) {
+            if (Number.isFinite(resources.memory_used_bytes) && resources.memory_limit_bytes > 0) {
+                resourceText += ' · RAM '+gib(resources.memory_used_bytes)+'/'+gib(resources.memory_limit_bytes)+' ГиБ';
+            }
+            if (Number.isFinite(resources.workers_current) && resources.worker_limit > 0) {
+                resourceText += ' · Воркеры '+resources.workers_current+'/'+resources.worker_limit;
+                if (resources.workers_starting > 0) {resourceText += ' (запуск '+resources.workers_starting+')';}
+            }
+        } else if (!stale && resources.memory_peak_bytes > 0) {
+            resourceText += ' · Пик RAM '+gib(resources.memory_peak_bytes)+' ГиБ';
+        }
+        if (!data.config_ready) {return {message: prefix+phase+resourceText, percent: null, stale: stale};}
         if (data.status === 'complete') {
             if (total === 0) {
-                return {message: 'Карта актуальна · Изменений для рендера нет',
+                return {message: 'Карта актуальна · Изменений для рендера нет'+resourceText,
                         percent: 100, stale: false, showBar: false};
             }
-            return {message: prefix+'Готово: '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)',
+            return {message: prefix+'Готово: '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)'+resourceText,
                     percent: percent, stale: false, showBar: false};
         }
         if (target) {phase = phase === 'Рендер' ? 'Активный слой: '+target : phase+' · Слой: '+target;}
@@ -908,7 +923,7 @@ overviewer.util = {
                 message += ' · Осталось '+(eta == null ? '—' : '~'+Math.ceil(eta/60)+' мин');
             }
         }
-        return {message: message, percent: percent, stale: stale, current: current,
+        return {message: message+resourceText, percent: percent, stale: stale, current: current,
                 showBar: !stale && data.status === 'rendering' && remaining > 0};
     },
     'getTileUrlGenerator': function(path, pathBase, pathExt) {

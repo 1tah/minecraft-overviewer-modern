@@ -724,6 +724,14 @@ def main():
         dispatch = dispatcher.MultiprocessingDispatcher(
             local_procs=config['processes'])
     dispatch.web_progress = live
+    if live:
+        if args.auto_resources:
+            live.set_resource_provider(dispatch.resource_snapshot)
+        else:
+            live.set_resource_provider(lambda: dict(
+                workers_current=sum(p.is_alive() for p in (dispatch.pool or []))
+                    if isinstance(dispatch, dispatcher.MultiprocessingDispatcher) else 1,
+                worker_limit=config['processes']))
     try:
         dispatch.render_all(tilesets, config['observer'])
         dispatch.close()

@@ -58,6 +58,14 @@ class WebProgress:
         self.lock = threading.RLock()
         self._stop = threading.Event()
         self.thread = None
+        self.resource_provider = None
+        self.memory = None
+        self.memory_peak = self.workers_peak = 0
+        try:
+            from .adaptive import CgroupMemory
+            self.memory = CgroupMemory()
+        except (OSError, ValueError, RuntimeError):
+            pass  # Legacy/unbounded runs can still publish worker counts.
         self.publish(force=True)
         self._bootstrap()
         if heartbeat:
@@ -92,6 +100,29 @@ setTimeout(tick,2000);}tick();
             self.phase = phase
             self.sequence += 1
             self.publish(force=True)
+
+    def set_resource_provider(self, provider):
+        with self.lock:
+            self.resource_provider = provider
+            self.publish(force=True)
+
+    def _resources(self):
+        result = dict(self.resource_provider()) if self.resource_provider else {}
+        current = result.get('workers_current', 0)
+        self.workers_peak = max(self.workers_peak, current)
+        if self.memory is not None:
+            try:
+                used = self.memory.usage()
+                self.memory_peak = max(self.memory_peak, used, self.memory.peak_usage())
+                result.update(memory_used_bytes=used, memory_limit_bytes=self.memory.limit,
+                              memory_peak_bytes=self.memory_peak)
+            except (OSError, ValueError):
+                pass
+        if self.state in TERMINAL:
+            result.update(workers_current=0, workers_busy=0, workers_starting=0)
+        if result:
+            result['workers_peak'] = self.workers_peak
+        return result
 
     def begin(self, tilesets):
         with self.lock:
@@ -148,7 +179,8 @@ setTimeout(tick,2000);}tick();
                     elapsed_seconds=elapsed,
                     updated_at=time.time(), update=2000 if self.state not in TERMINAL else 5000,
                     total=total, done=done, remaining=remaining,
-                    percent=100*done/total if total else 100, eta_seconds=eta, renders=rows)
+                    percent=100*done/total if total else 100, eta_seconds=eta, renders=rows,
+                    resources=self._resources())
 
     def publish(self, force=False):
         if os.getpid() != self.owner_pid:

@@ -50,3 +50,19 @@ assert.equal(url({x:0,y:0,z:0}), 'nether/base.png?c=old');
 context.overviewerConfig.map.liveTileVersion = 'run:5';
 assert.equal(url({x:0,y:0,z:0}), 'nether/base.png?c=old&live=run%3A5');
 console.log('Web progress formatter, resume ETA, stale status and tile refresh: passed');
+
+const liveResources = {...data, total:100, done:40, status:'rendering', phase:'Рендер',
+    resources:{memory_used_bytes:3.25*1073741824, memory_limit_bytes:10*1073741824,
+        memory_peak_bytes:4*1073741824, workers_current:4, workers_starting:1, worker_limit:12}};
+const liveLabel = format(liveResources, null, null, 1001).message;
+assert.match(liveLabel, /RAM 3.3\/10.0 ГиБ/);
+assert.match(liveLabel, /Воркеры 4\/12 \(запуск 1\)/);
+assert.doesNotMatch(format(liveResources, null, null, 1091).message, /RAM|Воркеры/);
+const finishedResources = {...liveResources, status:'complete', done:100};
+const finishedLabel = format(finishedResources, null, null, 1001);
+assert.match(finishedLabel.message, /Пик RAM 4.0 ГиБ/);
+assert.doesNotMatch(finishedLabel.message, /Воркеры|Осталось/);
+assert.equal(finishedLabel.showBar, false);
+const preparingLabel = format({...liveResources, status:'preparing', config_ready:false}, null, null, 1001);
+assert.match(preparingLabel.message, /RAM 3.3\/10.0 ГиБ/);
+console.log('Live RAM, worker counts, starting workers, terminal peak and stale readings: passed');
