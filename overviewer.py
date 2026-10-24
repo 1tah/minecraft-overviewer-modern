@@ -92,11 +92,14 @@ def main():
     parser.add_argument("-c", "--config", dest="config", action="store",
                         help="Specify the config file to use.")
     parser.add_argument("-p", "--processes", dest="procs", action="store", type=int,
-                        help="The number of local worker processes to spawn. Defaults to the "
-                        "number of CPU cores your computer has.")
+                        help="Worker processes (maximum in auto mode); defaults to available CPUs.")
 
     parser.add_argument("--pid", dest="pid", action="store", help="Specify the pid file to use.")
-    parser.add_argument('--memory-limit', help='Hard total memory limit, e.g. 8G (Linux systemd user scope).')
+    parser.add_argument('--memory-limit', help='Hard total memory limit, e.g. 8G (Linux cgroup).')
+    parser.add_argument('--cpu-limit', type=int, help='Maximum logical CPUs; affinity applies to all render workers.')
+    resource_mode = parser.add_mutually_exclusive_group()
+    resource_mode.add_argument('--auto-resources', action='store_true', help='Adjust worker count to the verified memory budget.')
+    resource_mode.add_argument('--fixed-resources', action='store_true', help='Use the requested fixed worker count.')
     parser.add_argument('--discard-resume', action='store_true', help='Discard saved work plan and scan again.')
     parser.add_argument('--verify-memory-limit', type=int, help=SUPPRESS)
     # Options that only apply to the config-less render usage
@@ -155,6 +158,17 @@ def main():
                           help="When running GenPOI, don't scan player data.")
 
     args, unknowns = parser.parse_known_args()
+    if args.memory_limit and not args.fixed_resources and not args.genpoi and not args.auto_resources:
+        args.auto_resources = True
+        sys.argv.append('--auto-resources')
+    if args.cpu_limit is not None:
+        if not sys.platform.startswith('linux'):
+            parser.error('--cpu-limit requires Linux')
+        from overviewer_core.resource_session import pin_cpus
+        try:
+            pin_cpus(args.cpu_limit)
+        except ValueError as exc:
+            parser.error(str(exc))
     if args.verify_memory_limit:
         from overviewer_core.memorylimit import verify_scope
         try:
@@ -168,6 +182,13 @@ def main():
             return run_limited(args.memory_limit, sys.argv)
         except (ValueError, RuntimeError) as exc:
             parser.error(str(exc))
+    if args.auto_resources and not args.genpoi:
+        from overviewer_core.adaptive import CgroupMemory
+        try:
+            CgroupMemory()
+        except (OSError, ValueError, RuntimeError) as exc:
+            parser.error(str(exc))
+        os.environ.update(OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='1', MKL_NUM_THREADS='1')
 
     # Check for possible shell quoting issues
     if len(unknowns) > 0 and args.world and args.output:
@@ -187,6 +208,17 @@ def main():
     if args.genpoi:
         # remove the "--genpoi" option from sys.argv before running genPI
         sys.argv.remove("--genpoi")
+        filtered, skip = [], False
+        for token in sys.argv:
+            if skip:
+                skip = False
+            elif token in ('--cpu-limit', '--verify-memory-limit'):
+                skip = True
+            elif token in ('--auto-resources', '--fixed-resources') or token.startswith(('--cpu-limit=', '--verify-memory-limit=')):
+                continue
+            else:
+                filtered.append(token)
+        sys.argv = filtered
         g = __import__("overviewer_core.aux_files", {}, {}, ["genPOI"])
         g.genPOI.main()
         return 0
@@ -677,7 +709,16 @@ def main():
         live.begin(tilesets)
 
     # multiprocessing dispatcher
-    if config['processes'] == 1:
+    if args.auto_resources:
+        if not sys.platform.startswith('linux'):
+            raise RuntimeError('Auto resources require Linux and a verified memory limit.')
+        from overviewer_core.adaptive import AdaptiveDispatcher
+        from overviewer_core.resource_session import pin_cpus
+        allowed = pin_cpus(args.cpu_limit or (args.procs if args.procs and args.procs > 0 else None))
+        maximum = min(len(allowed), args.procs) if args.procs and args.procs > 0 else len(allowed)
+        os.environ.update(OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='1', MKL_NUM_THREADS='1')
+        dispatch = AdaptiveDispatcher(maximum, destdir)
+    elif config['processes'] == 1:
         dispatch = dispatcher.Dispatcher()
     else:
         dispatch = dispatcher.MultiprocessingDispatcher(
@@ -687,6 +728,9 @@ def main():
         dispatch.render_all(tilesets, config['observer'])
         dispatch.close()
     except BaseException:
+        if args.auto_resources:
+            dispatch.abort()
+            dispatch.finish_report('interrupted' if isinstance(sys.exc_info()[1], KeyboardInterrupt) else 'error')
         if isinstance(dispatch, dispatcher.MultiprocessingDispatcher):
             for proc in dispatch.pool or []:
                 if proc.is_alive():
@@ -706,6 +750,8 @@ def main():
         ts.finish_journal()
     if live:
         live.stop('complete')
+    if args.auto_resources:
+        dispatch.finish_report('complete')
 
     for out in changelists.values():
         logging.debug("Closing %s (%s).", out, out.fileno())

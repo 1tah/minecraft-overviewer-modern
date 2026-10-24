@@ -38,7 +38,7 @@ namespace = {}
 exec((source/'overviewer_core/util.py').read_text().split('DIMENSION_INFO =')[0], namespace)
 version = namespace['DEFAULT_VERSION']
 (app/'overviewer_core/overviewer_version.py').write_text(
-    "VERSION=%r\nHASH=%r\nBUILD_DATE='2026-10-24'\nBUILD_PLATFORM='Ubuntu 20.04 x86_64 / GCC 9'\nBUILD_OS='Linux'\n"
+    "VERSION=%r\nHASH=%r\nBUILD_DATE='2026-10-25'\nBUILD_PLATFORM='Ubuntu 20.04 x86_64 / GCC 9'\nBUILD_OS='Linux'\n"
     % (version, args.revision))
 for name in ('overviewer.py', 'cgroup_runner.py', 'mark_oom.py', 'get-textures.py',
              'serve.py', 'configNew.py', 'START.sh', 'START_HERE_RU.md', 'ICONS.txt',
@@ -46,6 +46,7 @@ for name in ('overviewer.py', 'cgroup_runner.py', 'mark_oom.py', 'get-textures.p
     (bundle/name).write_text((deploy/name).read_text(encoding='utf-8'), encoding='utf-8', newline='\n')
 for name in ('overviewer.py', 'get-textures.py', 'serve.py', 'START.sh'):
     (bundle/name).chmod(0o755)
+shutil.copyfile(source/'overviewer_core/resource_session.py', bundle/'resource_session.py')
 shutil.copyfile(source/'COPYING.txt', bundle/'COPYING.txt')
 shutil.copytree(deploy/'icons', bundle/'output/icons')
 shutil.copytree(deploy/'pillow_include', bundle/'build-tools/pillow-headers')
@@ -57,6 +58,7 @@ dependencies = subprocess.check_output([str(runtime/'bin/python3'), '-m', 'pip',
 info = dict(source_commit=args.revision, version=version, built_for='Ubuntu 20.04 x86_64, glibc 2.31',
             python_runtime=json.loads((deploy/'runtime-python.json').read_text()), dependencies=dependencies,
             palette_26_3_hotfix_included=True, includes_user_worlds=False, includes_mojang_assets=False,
+            adaptive_resource_control=True,
             cgroup_v1_note='Supported interface; not tested on the target server kernel.')
 if args.reports:
     shutil.copytree(args.reports, bundle/'reports')

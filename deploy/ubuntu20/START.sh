@@ -4,4 +4,4 @@ cd "$(dirname "$0")"
 if [ ! -f assets/client.jar ]; then
     ./get-textures.py "${MINECRAFT_VERSION:-1.21.5}"
 fi
-exec ./overviewer.py --config=./configNew.py -p=4 "$@"
+exec ./overviewer.py --config=./configNew.py "$@"

@@ -17,8 +17,8 @@ try:
     output = Path(config.get_validated_config()['outputdir'])/'render-progress.json'
     if output.exists():
         data = json.loads(output.read_text(encoding='utf-8'))
-        data.update(status='error', phase='Остановлен: достигнут лимит RAM; уменьшите -p',
-                    message='Остановлен: достигнут лимит RAM; уменьшите -p',
+        data.update(status='error', phase='Остановлен: недостаточно RAM; увеличьте лимит или уменьшите число слоёв',
+                    message='Остановлен: недостаточно RAM; увеличьте лимит или уменьшите число слоёв',
                     updated_at=time.time(), sequence=data.get('sequence', 0)+1)
         with FileReplacer(str(output)) as temporary:
             Path(temporary).write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
