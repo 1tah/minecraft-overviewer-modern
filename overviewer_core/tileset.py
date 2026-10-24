@@ -38,6 +38,8 @@ from . import nbt, world
 from .files import FileReplacer, get_fs_caps
 from .optimizeimages import optimize_image
 from .util import roundrobin
+from .renderjournal import RenderJournal
+from .tilelayout import TileLayout
 
 
 """
@@ -308,6 +310,8 @@ class TileSet(object):
 
         config = self.am.get_tileset_config(self.options.get("name"))
         self.config = config
+        self.journal = RenderJournal(self.outputdir, self.options.get('resume_slot', 0))
+        self.resume_metadata = self.journal.peek(self.options.get('resume_key')) if self.options.get('resume_key') else None
 
         self.last_rendertime = config.get('last_rendertime', 0)
         self.forcerendertime = config.get('forcerendertime', 0)
@@ -349,7 +353,7 @@ class TileSet(object):
                     "normally happen. I guess we have no choice but to do a "
                     "--forcerender", self.options['name'])
                 self.options['renderchecks'] = 2
-            elif config.get("render_in_progress", False):
+            elif config.get("render_in_progress", False) and not self.resume_metadata:
                 # The last render must have been interrupted. The default should be
                 # a check-tiles render then
                 logging.warning(
@@ -409,7 +413,12 @@ class TileSet(object):
             raise ValueError("imgformat must be one of: 'png', 'jpg' or 'webp'")
 
         # This sets self.treedepth, self.xradius, and self.yradius
-        self._set_map_size()
+        if self.resume_metadata:
+            self.treedepth = self.resume_metadata['depth']
+            self.xradius = 2 ** self.treedepth
+            self.yradius = 2 * self.xradius
+        else:
+            self._set_map_size()
 
     # Only pickle the initial state. Don't pickle anything resulting from the
     # do_preprocessing step
@@ -430,6 +439,13 @@ class TileSet(object):
         if self.options['renderchecks'] == 3:
             return
 
+        if self.resume_metadata:
+            self.max_chunk_mtime = self.resume_metadata['max_chunk_mtime']
+            self.journal.connect()
+            logging.info('Resuming %s: %d pending tiles; skipping chunk/tile scan.',
+                         self.options['name'], self.journal.count())
+            return
+
         # REMEMBER THAT ATTRIBUTES ASSIGNED IN THIS METHOD ARE NOT AVAILABLE IN
         # THE do_work() METHOD (because this is only called in the main process
         # not the workers)
@@ -448,6 +464,18 @@ class TileSet(object):
 
         # Do the chunk scan here
         self.dirtytree = self._chunk_scan()
+        if self.options.get('resume_key'):
+            self.journal.create(dict(key=self.options['resume_key'], depth=self.treedepth,
+                                     max_chunk_mtime=self.max_chunk_mtime),
+                                self._iterate_work_items(0, include_changelist=False))
+
+    def work_completed(self, tilepath):
+        if self.journal.db is not None:
+            self.journal.completed(tilepath)
+
+    def finish_journal(self):
+        if self.journal.db is not None:
+            self.journal.finish()
 
     def get_num_phases(self):
         """Returns the number of levels in the quadtree, which is equal to the
@@ -459,6 +487,8 @@ class TileSet(object):
     def get_phase_length(self, phase):
         """Returns the number of work items in a given phase.
         """
+        if self.journal.db is not None:
+            return self.journal.count()
         # Yeah functional programming!
         # and by functional we mean a bastardized python switch statement
         return {
@@ -470,6 +500,20 @@ class TileSet(object):
         }[self.options['renderchecks']]()
 
     def iterate_work_items(self, phase):
+        if self.journal.db is not None:
+            for tilepath, dependencies in self.journal.pending():
+                fd = self.options.get('changelist')
+                if fd:
+                    if tilepath:
+                        imgpath = os.path.join(self.outputdir, *(str(x) for x in tilepath)) + '.' + self.imgextension
+                    else:
+                        imgpath = os.path.join(self.outputdir, 'base.' + self.imgextension)
+                    os.write(fd, (imgpath + '\n').encode())
+                yield tilepath, dependencies
+        else:
+            yield from self._iterate_work_items(phase)
+
+    def _iterate_work_items(self, phase, include_changelist=True):
         """Iterates over the dirty tiles in the tree and return them in the
         appropriate order with the appropriate dependencies.
 
@@ -481,7 +525,7 @@ class TileSet(object):
             return
 
         # The following block of code implementes the changelist functionality.
-        fd = self.options.get("changelist", None)
+        fd = self.options.get("changelist", None) if include_changelist else None
         if fd:
             logging.debug("Changelist activated for %s (fileno %s)", self, fd)
 
@@ -694,6 +738,13 @@ class TileSet(object):
             # Skip a depth 1 tree. A depth 1 tree pretty much can't happen, so
             # when we detect this it usually means the tree is actually empty
             return
+        layout = TileLayout(self.outputdir, curdepth, self.imgextension)
+        layout.recover()
+        layout_changed = curdepth != layout.depth or self.treedepth != layout.depth
+        curdepth = layout.depth
+        if layout_changed and self.options['renderchecks'] != 2:
+            # New composite levels also need work when no old chunk changed.
+            self.options['renderchecks'] = 1
         logging.debug(
             "Current tree depth for %s is reportedly %s. Target tree depth is %s.",
             self.options['name'], curdepth, self.treedepth)
@@ -701,14 +752,12 @@ class TileSet(object):
             if self.treedepth > curdepth:
                 logging.warning("Your map seems to have expanded beyond its previous bounds.")
                 logging.warning("Doing some tile re-arrangements... just a sec...")
-                for _ in range(self.treedepth - curdepth):
-                    self._increase_depth()
+                layout.resize(self.treedepth)
             elif self.treedepth < curdepth:
                 logging.warning(
                     "Your map seems to have shrunk. Did you delete some "
                     "chunks? No problem. Re-arranging tiles, just a sec...")
-                for _ in range(curdepth - self.treedepth):
-                    self._decrease_depth()
+                layout.resize(self.treedepth)
                 logging.info(
                     "There, done. I'm switching to --check-tiles mode for "
                     "this one render. This will make sure any old tiles that "
@@ -858,7 +907,7 @@ class TileSet(object):
 
         last_rendertime = self.last_rendertime
 
-        max_chunk_mtime = 0
+        max_chunk_mtime = last_rendertime
 
         # For each chunk, do this:
         #   For each tile that the chunk touches, do this:

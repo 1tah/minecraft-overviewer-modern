@@ -20,6 +20,8 @@ import shutil
 import logging
 import stat
 import errno
+import uuid
+import time
 
 default_caps = {"chmod_works": True, "rename_works": True}
 
@@ -113,20 +115,14 @@ def mirror_dir(src, dst, entities=None, capabilities=default_caps, force_writabl
                 else:
                     shutil.copyfile(os.path.join(src, entry), os.path.join(dst, entry))
 
-# Define a context manager to handle atomic renaming or "just forget it write
-# straight to the file" depending on whether os.rename provides atomic
-# overwrites.
-# Detect whether os.rename will overwrite files
+# Publish images/config only after a complete write, including on Windows.
 doc = """This class acts as a context manager for files that are to be written
 out overwriting an existing file.
 
 The parameter is the destination filename. The value returned into the context
-is the filename that should be used. On systems that support an atomic
-os.rename(), the filename will actually be a temporary file, and it will be
-atomically replaced over the destination file on exit.
-
-On systems that don't support an atomic rename, the filename returned is the
-filename given.
+is a unique temporary filename in the same directory. On successful exit,
+fsync and os.replace publish it atomically. Filesystems that cannot replace
+files fail without truncating the previous published file.
 
 If an error is encountered, the file is attempted to be removed, and the error
 is propagated.
@@ -142,40 +138,36 @@ class FileReplacer(object):
     def __init__(self, destname, capabilities=default_caps):
         self.caps = capabilities
         self.destname = destname
-        if self.caps.get("rename_works"):
-            self.tmpname = destname + ".tmp"
     def __enter__(self):
-        if self.caps.get("rename_works"):
-            # rename works here. Return a temporary filename
-            return self.tmpname
-        return self.destname
+        self.tmpname = self.destname + '.' + uuid.uuid4().hex + '.tmp'
+        fd = os.open(self.tmpname, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+        os.close(fd)
+        return self.tmpname
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.caps.get("rename_works"):
-            if exc_type:
-                # error
-                try:
-                    os.remove(self.tmpname)
-                except Exception as e:
-                    logging.warning("An error was raised, so I was doing "
-                            "some cleanup first, but I couldn't remove "
-                            "'%s'!", self.tmpname)
-            else:
-                # copy permission bits, if needed
-                if self.caps.get("chmod_works") and os.path.exists(self.destname):
+        try:
+            if exc_type is None:
+                with open(self.tmpname, 'r+b') as completed:
+                    os.fsync(completed.fileno())
+                if self.caps.get('chmod_works') and os.path.exists(self.destname):
+                    shutil.copymode(self.destname, self.tmpname)
+                # Unlike os.rename, os.replace also replaces existing files on Windows.
+                # An unsupported filesystem fails here while preserving the old tile.
+                for attempt in range(6):
                     try:
-                        shutil.copymode(self.destname, self.tmpname)
-                    except OSError as e:
-                        # Ignore errno ENOENT: file does not exist. Due to a race
-                        # condition, two processes could conceivably try and update
-                        # the same temp file at the same time
-                        if e.errno != errno.ENOENT:
+                        os.replace(self.tmpname, self.destname)
+                        break
+                    except PermissionError:
+                        if os.name != 'nt' or attempt == 5:
                             raise
-                # atomic rename into place
-                try:
-                    os.rename(self.tmpname, self.destname)
-                except OSError as e:
-                    # Ignore errno ENOENT: file does not exist. Due to a race
-                    # condition, two processes could conceivably try and update
-                    # the same temp file at the same time
-                    if e.errno != errno.ENOENT:
-                        raise
+                        time.sleep(0.05 * 2**attempt)
+                if os.name == 'posix':
+                    directory = os.open(os.path.dirname(self.destname) or '.', os.O_RDONLY | os.O_DIRECTORY)
+                    try:
+                        os.fsync(directory)
+                    finally:
+                        os.close(directory)
+        finally:
+            try:
+                os.unlink(self.tmpname)
+            except FileNotFoundError:
+                pass

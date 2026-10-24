@@ -27,6 +27,7 @@ import logging
 import functools
 
 from . import util
+from .resource_models import FIRST_ID, LAST_ID, MISSING_ID, ModelRegistry
 
 
 BLOCKTEXTURE = "assets/minecraft/textures/block/"
@@ -44,6 +45,13 @@ solid_blocks = set()
 fluid_blocks = set()
 nospawn_blocks = set()
 nodata_blocks = set()
+
+# Reserve properties before the C extension snapshots these tables at import.
+# Model geometry is conservatively transparent so partial blocks never hide
+# their neighbours. IDs/data are assigned deterministically from sorted assets.
+known_blocks.update(range(MISSING_ID, LAST_ID))
+transparent_blocks.update(range(MISSING_ID, LAST_ID))
+max_blockid = LAST_ID
 
 
 # This is here for circular import reasons.
@@ -138,10 +146,26 @@ class Textures(object):
         global blockmap_generators
         global known_blocks, used_datas
         self.blockmap = [None] * max_blockid * max_data
+
+        from .world import RegionSet
+        native_names = RegionSet(os.path.dirname(__file__), 'region')._blockmap
+        self.model_registry = ModelRegistry(self, native_names)
+        mapped_ids = {identity[0] for identity in native_names.values()}
+        available_ids = {identity[0] for name, identity in native_names.items()
+                         if name in self.model_registry.available_names}
         
         for (blockid, data), texgen in list(blockmap_generators.items()):
+            if self.model_registry.available_names and blockid in mapped_ids and blockid not in available_ids:
+                continue  # native material introduced after this resource pack
             tex = texgen(self, blockid, data)
             self.blockmap[blockid * max_data + data] = self.generate_texture_tuple(tex)
+
+        for (blockid, data), sprite_image in self.model_registry.sprites(self):
+            self.blockmap[blockid * max_data + data] = self.generate_texture_tuple(sprite_image)
+        missing = Image.new('RGBA', (16,16), (255,0,255,255))
+        ImageDraw.Draw(missing).rectangle((0,0,7,7), fill=(20,20,20,255))
+        ImageDraw.Draw(missing).rectangle((8,8,15,15), fill=(20,20,20,255))
+        self.blockmap[MISSING_ID * max_data] = self.generate_texture_tuple(self.build_block(missing, missing))
         
         if self.texture_size != 24:
             # rescale biome grass

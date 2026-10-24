@@ -1496,14 +1496,33 @@ class RegionSet(object):
 
     # Re-initialize upon unpickling
     def __getstate__(self):
-        return (self.regiondir, self.rel)
+        return (self.regiondir, self.rel, getattr(self, 'model_registry', None))
     def __setstate__(self, state):
-        return self.__init__(*state)
+        self.__init__(*state[:2])
+        self.model_registry = state[2] if len(state) > 2 else None
 
     def __repr__(self):
         return "<RegionSet regiondir=%r>" % self.regiondir
 
     def _get_block(self, palette_entry):
+        # Legacy invisible sentinels (99999) must never enter a uint16 palette.
+        # NumPy 2 rejects the old overflowing assignment instead of wrapping it.
+        if self._blockmap.get(palette_entry['Name'], (0, 0))[0] > 65535:
+            return 0, 0
+        if palette_entry['Name'] not in self._blockmap:
+            registry = getattr(self, 'model_registry', None)
+            if registry is not None:
+                try:
+                    return registry.translate(palette_entry)
+                except KeyError:
+                    name = palette_entry['Name']
+                    warned = self.__dict__.setdefault('_unknown_model_warnings', set())
+                    if name not in warned:
+                        logging.warning('Unknown block/state %r: using visible missing-model marker. '
+                                        'Use a matching client JAR as texturepath.', palette_entry)
+                        warned.add(name)
+                    from .resource_models import MISSING_ID
+                    return MISSING_ID, 0
         def generate_copper(base_id, base_ns="minecraft"):
             variants = []
             states = ['','exposed_','weathered_','oxidized_']
@@ -2194,8 +2213,15 @@ class RegionSet(object):
 
             try:
                 translated_biomes[i] = self._biomemap.index(key)
-            except KeyError:
-                raise Exception("Unknown biome `%s` wanted, investigate!" % key)
+            except ValueError:
+                # Future/custom biomes must not abort otherwise readable chunks.
+                # Keep the original numeric table stable for the C extension.
+                fallback = 'minecraft:birch_forest' if key == 'minecraft:dappled_forest' else 'minecraft:plains'
+                translated_biomes[i] = self._biomemap.index(fallback)
+                warned = self.__dict__.setdefault('_unknown_biome_warnings', set())
+                if key not in warned:
+                    logging.warning('Biome %s uses approximate colours from %s.', key, fallback)
+                    warned.add(key)
 
         if not biome_data:
             #no biome-dataarray, means entire biome is palette[0]

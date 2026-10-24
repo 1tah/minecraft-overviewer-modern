@@ -32,7 +32,7 @@ import subprocess
 import multiprocessing
 import time
 import logging
-from argparse import ArgumentParser
+from argparse import ArgumentParser, SUPPRESS
 from collections import OrderedDict
 
 from overviewer_core import util
@@ -43,6 +43,7 @@ from overviewer_core import config_parser, tileset, assetmanager, dispatcher
 from overviewer_core import cache
 from overviewer_core import observer
 from overviewer_core.nbt import CorruptNBTError
+from overviewer_core.renderjournal import render_key
 
 helptext = """
 %(prog)s [--rendermodes=...] [options] <World> <Output Dir>
@@ -93,6 +94,9 @@ def main():
                         "number of CPU cores your computer has.")
 
     parser.add_argument("--pid", dest="pid", action="store", help="Specify the pid file to use.")
+    parser.add_argument('--memory-limit', help='Hard total memory limit, e.g. 8G (Linux systemd user scope).')
+    parser.add_argument('--discard-resume', action='store_true', help='Discard saved work plan and scan again.')
+    parser.add_argument('--verify-memory-limit', type=int, help=SUPPRESS)
     # Options that only apply to the config-less render usage
     parser.add_argument("--rendermodes", dest="rendermodes", action="store",
                         help="If you're not using a config file, specify which rendermodes to "
@@ -149,6 +153,19 @@ def main():
                           help="When running GenPOI, don't scan player data.")
 
     args, unknowns = parser.parse_known_args()
+    if args.verify_memory_limit:
+        from overviewer_core.memorylimit import verify_scope
+        try:
+            verify_scope(args.verify_memory_limit)
+            logging.info('Verified total cgroup memory cap: %d bytes (swap disabled).', args.verify_memory_limit)
+        except (OSError, ValueError, RuntimeError) as exc:
+            parser.error(str(exc))
+    if args.memory_limit:
+        from overviewer_core.memorylimit import run_limited
+        try:
+            return run_limited(args.memory_limit, sys.argv)
+        except (ValueError, RuntimeError) as exc:
+            parser.error(str(exc))
 
     # Check for possible shell quoting issues
     if len(unknowns) > 0 and args.world and args.output:
@@ -492,6 +509,8 @@ def main():
     # Now we start the actual processing, now that all the configuration has
     # been gathered and validated
     # create our asset manager... ASSMAN
+    from overviewer_core.renderjournal import OutputLock
+    output_lock = OutputLock(destdir)
     assetMrg = assetmanager.AssetManager(destdir, config.get('customwebassets', None), config.get('attribution', None))
 
     # If we've been asked to update web assets, do that and then exit
@@ -574,6 +593,8 @@ def main():
         #################
         # Apply any regionset transformations here
 
+        rset.model_registry = getattr(tex, 'model_registry', None)
+
         # Insert a layer of caching above the real regionset. Any world
         # tranformations will pull from this cache, but their results will not
         # be cached by this layer. This uses a common pool of caches; each
@@ -611,8 +632,16 @@ def main():
             "dimension", "changelist", "showspawn", "overlay", "base", "poititle", "maxzoom",
             "showlocationmarker", "minzoom", "center"])
         tileSetOpts.update({"spawn": w.find_true_spawn(render['dimension'])})
-        for rset in rsets:
-            tset = tileset.TileSet(w, rset, assetMrg, tex, tileSetOpts, tileset_dir)
+        if not args.estimatedirtytiles:
+            tileSetOpts['resume_key'] = render_key(render, w, tex.jars.keys())
+        for slot, rset in enumerate(rsets):
+            opts = dict(tileSetOpts, resume_slot=slot)
+            if args.discard_resume:
+                from overviewer_core.renderjournal import RenderJournal
+                journal_path = RenderJournal(tileset_dir, slot).path
+                if os.path.exists(journal_path):
+                    os.unlink(journal_path)
+            tset = tileset.TileSet(w, rset, assetMrg, tex, opts, tileset_dir)
             tilesets.append(tset)
 
     # If none of the requested dimenstions exist, tilesets will be empty
@@ -639,10 +668,25 @@ def main():
     else:
         dispatch = dispatcher.MultiprocessingDispatcher(
             local_procs=config['processes'])
-    dispatch.render_all(tilesets, config['observer'])
-    dispatch.close()
+    try:
+        dispatch.render_all(tilesets, config['observer'])
+        dispatch.close()
+    except BaseException:
+        if isinstance(dispatch, dispatcher.MultiprocessingDispatcher):
+            for proc in dispatch.pool or []:
+                if proc.is_alive():
+                    proc.terminate()
+            for proc in dispatch.pool or []:
+                proc.join(timeout=5)
+            if dispatch.manager is not None:
+                dispatch.manager.shutdown()
+        for ts in tilesets:
+            ts.journal.close()
+        raise
 
     assetMrg.finalize(tilesets)
+    for ts in tilesets:
+        ts.finish_journal()
 
     for out in changelists.values():
         logging.debug("Closing %s (%s).", out, out.fileno())

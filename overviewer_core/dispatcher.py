@@ -17,9 +17,22 @@ import multiprocessing
 import multiprocessing.managers
 import queue
 import time
+import os
+import sys
+import signal
 
 from . import util
 from .signals import Signal
+
+
+def follow_parent(parent_pid):
+    if sys.platform.startswith('linux'):
+        import ctypes
+        libc = ctypes.CDLL(None, use_errno=True)
+        if libc.prctl(1, signal.SIGTERM) != 0:  # PR_SET_PDEATHSIG
+            raise OSError(ctypes.get_errno(), 'Cannot set parent-death signal')
+        if os.getppid() != parent_pid:
+            raise SystemExit(1)
 
 
 class Dispatcher:
@@ -115,6 +128,9 @@ class Dispatcher:
 
         # clean out the appropriate lists
         for job in finished_jobs:
+            callback = getattr(job[0], 'work_completed', None)
+            if callback:
+                callback(job[1])
             self._running_jobs.remove(job)
         for job in dispatched_jobs:
             self._pending_jobs.remove(job)
@@ -213,6 +229,7 @@ class MultiprocessingDispatcherProcess(multiprocessing.Process):
         created in MultiprocessingDispatcher.
         """
         super(MultiprocessingDispatcherProcess, self).__init__()
+        self.coordinator_pid = os.getpid()
         self.job_queue = manager.get_job_queue()
         self.result_queue = manager.get_result_queue()
         self.signal_queue = manager.get_signal_queue()
@@ -231,6 +248,8 @@ class MultiprocessingDispatcherProcess(multiprocessing.Process):
         automatically. This is the method that actually runs in the
         new worker process.
         """
+        # Workers must not continue writing tiles after the coordinator dies.
+        follow_parent(self.coordinator_pid)
         # per-process job get() timeout
         timeout = 1.0
 
@@ -291,7 +310,7 @@ class MultiprocessingDispatcher(Dispatcher):
         self.outstanding_jobs = 0
         self.num_workers = 0
         self.manager = MultiprocessingDispatcherManager(address=address, authkey=authkey)
-        self.manager.start()
+        self.manager.start(initializer=follow_parent, initargs=(os.getpid(),))
         self.job_queue = self.manager.get_job_queue()
         self.result_queue = self.manager.get_result_queue()
         self.signal_queue = self.manager.get_signal_queue()
@@ -343,6 +362,11 @@ class MultiprocessingDispatcher(Dispatcher):
     def _handle_messages(self, timeout=0.01):
         # work function: takes results out of the result queue and
         # keeps track of how many outstanding jobs remain
+        for proc in self.pool:
+            if proc.exitcode is not None:
+                raise RuntimeError('Render worker %s exited unexpectedly (code %s). '
+                                   'The render journal is retained; rerun the same command.'
+                                   % (proc.pid, proc.exitcode))
         finished_jobs = []
 
         result_empty = False
