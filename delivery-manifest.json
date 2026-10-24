@@ -13,22 +13,25 @@
   "add": [
     "ANALYSIS_RU.md",
     "BUILD_AND_RUN_RU.md",
+    "WSL_RUN_RU.md",
     "contrib/verify_modern_render.py",
     "overviewer_core/memorylimit.py",
     "overviewer_core/renderjournal.py",
     "overviewer_core/resource_models.py",
     "overviewer_core/tilelayout.py",
     "test/modern_fixture.py",
+    "test/test_dispatcher_lifecycle.py",
     "test/test_render_recovery.py",
     "test/test_resource_models.py",
     "test/test_tilelayout_recovery.py"
   ],
   "sha256": {
-    "ANALYSIS_RU.md": "d283f4672f9a82d4dba241b34cbb0ccea769298d29699f52cad225bbdfb6dc05",
-    "BUILD_AND_RUN_RU.md": "ab899b4bd708b518678267c1f94a65717900198928fbbb462df5505dd4f3d143",
+    "ANALYSIS_RU.md": "9599050e890a0005f93b9afe986e2ef3ddcc5da1018a95d15ae96fc62424d96c",
+    "BUILD_AND_RUN_RU.md": "cf4473dd05fb2a541d74e398747170bb7bca2f1f846df5f304dc9c2be462ef04",
+    "WSL_RUN_RU.md": "2acba8319fee89369badf585e2bb308adfb05a5b26b1167d196c47ade5ec87f2",
     "contrib/verify_modern_render.py": "0b78e7419eedc8837ce191cbba6077cd8f704e697343838374c08698b9221d51",
     "overviewer.py": "0dd8def06b9fc50ef4d50d841b6f81aba05ccb9e54e19a1b82c688735d282bdb",
-    "overviewer_core/dispatcher.py": "72e0fe32ced385fff26a7af85a280c4dbafe3df13200d7a2f4e81b2cfb6c0a5c",
+    "overviewer_core/dispatcher.py": "1f2b786b2097a2419af22842e0562cf558f815434cfa69da0f745bab8421e1b0",
     "overviewer_core/files.py": "d78681232a46917469aa1953649d2bc6a0d6f8afafcd4cdf8ac939477fabf6c6",
     "overviewer_core/memorylimit.py": "6ee88e10429e909d7e720aaf1849f118033dbcdd56440cca69ea11624074e91e",
     "overviewer_core/renderjournal.py": "f9c34c9015ba6f715817262a6c688642316e1512d6c0eba8705e6b00b17b5ede",
@@ -38,16 +41,18 @@
     "overviewer_core/tileset.py": "8f51028568816151585367eff9b432c65dbb38b681c4d8475f618c7a0a59bb0c",
     "overviewer_core/world.py": "52e27cd959412abd7128988afbe2fa09b7883596a6c2808bb61581747f3bf159",
     "test/modern_fixture.py": "e377995f0f2011fc0f651fa9233ac1494a7c9b11e5f22b50f577756dcdd5653d",
+    "test/test_dispatcher_lifecycle.py": "adc5add6c9cbb8b4c01da2411d9c321bb385ae64de437e2c3b20ed97fdb06cd3",
     "test/test_render_recovery.py": "e4add35e08b240a37ee36f16b1b801224566ffa36f9d2f50e2111dfb7d4ae06a",
     "test/test_resource_models.py": "2c4c9069f8fa058e43393470950d366bc7aaa7738ddec83662390de9dd44e451",
     "test/test_tilelayout_recovery.py": "129bb2cd4b8bf47543a15d68b97b29768703092fc369dca6cb5a4dbe0053c1bf"
   },
   "sha256_lf_utf8": {
-    "ANALYSIS_RU.md": "d283f4672f9a82d4dba241b34cbb0ccea769298d29699f52cad225bbdfb6dc05",
-    "BUILD_AND_RUN_RU.md": "ab899b4bd708b518678267c1f94a65717900198928fbbb462df5505dd4f3d143",
+    "ANALYSIS_RU.md": "9599050e890a0005f93b9afe986e2ef3ddcc5da1018a95d15ae96fc62424d96c",
+    "BUILD_AND_RUN_RU.md": "cf4473dd05fb2a541d74e398747170bb7bca2f1f846df5f304dc9c2be462ef04",
+    "WSL_RUN_RU.md": "2acba8319fee89369badf585e2bb308adfb05a5b26b1167d196c47ade5ec87f2",
     "contrib/verify_modern_render.py": "0b78e7419eedc8837ce191cbba6077cd8f704e697343838374c08698b9221d51",
     "overviewer.py": "5b39e2d862275d506168a46ca2b6b7a5b35ec28611896bd0bed67d747d9f3e4e",
-    "overviewer_core/dispatcher.py": "ce89fedc7ff39ee2168becc9aeda650f7dfe61e41d303d7f40ca89d366334ac1",
+    "overviewer_core/dispatcher.py": "9419bb394aaff173da0997730b737a351334241cba420dccbde92785c9ccc0c4",
     "overviewer_core/files.py": "ffa67b6766e61449fdbb4fdaaa936d48d4f16aef0268f8591ba5a27fff9aea6d",
     "overviewer_core/memorylimit.py": "6ee88e10429e909d7e720aaf1849f118033dbcdd56440cca69ea11624074e91e",
     "overviewer_core/renderjournal.py": "f9c34c9015ba6f715817262a6c688642316e1512d6c0eba8705e6b00b17b5ede",
@@ -57,13 +62,14 @@
     "overviewer_core/tileset.py": "ff9785118d5e3002f15f268782f5732d4292cfbb72d6367df45e08480c6e146a",
     "overviewer_core/world.py": "7591708c4d0f6a2d9023328ef21228af316d0feab31caaa57de94405acf899d7",
     "test/modern_fixture.py": "e377995f0f2011fc0f651fa9233ac1494a7c9b11e5f22b50f577756dcdd5653d",
+    "test/test_dispatcher_lifecycle.py": "adc5add6c9cbb8b4c01da2411d9c321bb385ae64de437e2c3b20ed97fdb06cd3",
     "test/test_render_recovery.py": "e4add35e08b240a37ee36f16b1b801224566ffa36f9d2f50e2111dfb7d4ae06a",
     "test/test_resource_models.py": "2c4c9069f8fa058e43393470950d366bc7aaa7738ddec83662390de9dd44e451",
     "test/test_tilelayout_recovery.py": "129bb2cd4b8bf47543a15d68b97b29768703092fc369dca6cb5a4dbe0053c1bf"
   },
   "validation": {
-    "platform": "Windows x64 / Python 3.12.14 / MSVC 14.44 / NumPy 2.3.5 / Pillow 12.3.0",
-    "pytest": "154 passed, 1 skipped; 3 inherited Pillow deprecation warnings",
+    "platform": "Windows x64 / Python 3.12.14 / MSVC 14.44; Ubuntu 26.04.1 WSL2 / Python 3.14.4 / GCC 15.2; NumPy 2.3.5 / Pillow 12.3.0",
+    "pytest": "Windows: 155 passed, 1 skipped. Ubuntu WSL2: 157 passed, 1 skipped. Inherited Pillow deprecation warnings remain.",
     "minecraft_jars": {
       "1.21.5": {
         "sha1": "b88808bbb3da8d9f453694b5d8f74a3396f1a533",
@@ -88,11 +94,19 @@
       "1.21.5: 101 jobs completed",
       "26.3: crash after 3 jobs, resume 98 jobs",
       "26.3: 2 workers completed",
-      "26.3: depth 5 -> 7, crash then resume 107 jobs; 56 old leaf files preserved"
+      "26.3: depth 5 -> 7, crash then resume 107 jobs; 56 old leaf files preserved",
+      "Ubuntu WSL2: three user-supplied 1.21.5 worlds, 5295 jobs completed using 4 workers under a verified 4 GiB memory cap",
+      "Ubuntu WSL2: crash after 3 jobs, resume 98 jobs with 2 workers; 3 files preserve SHA-256 and mtime"
     ],
+    "memory_test": {
+      "platform": "Ubuntu WSL2 / systemd 259 / cgroup v2",
+      "MemoryMax": 134217728,
+      "MemoryPeak": 134217728,
+      "Result": "oom-kill",
+      "disposable_process_only": true
+    },
     "not_verified": [
-      "Linux build/runtime",
-      "Actual kernel OOM stress test on Linux",
+      "Remote production Linux server",
       "Full pixel equivalence with Minecraft entity/biome renderer"
     ]
   },

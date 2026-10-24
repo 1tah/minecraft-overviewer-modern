@@ -20,6 +20,7 @@ import time
 import os
 import sys
 import signal
+import threading
 
 from . import util
 from .signals import Signal
@@ -27,12 +28,27 @@ from .signals import Signal
 
 def follow_parent(parent_pid):
     if sys.platform.startswith('linux'):
+        if os.getppid() != parent_pid:
+            # Under forkserver the OS parent is the fork server, while the
+            # multiprocessing parent/sentinel still identifies the coordinator.
+            parent = multiprocessing.parent_process()
+            if parent is None or parent.pid != parent_pid or not parent.is_alive():
+                raise SystemExit(1)
+            threading.Thread(target=_wait_for_parent, args=(parent.sentinel,),
+                             daemon=True, name='overviewer-parent-watch').start()
+            return
         import ctypes
         libc = ctypes.CDLL(None, use_errno=True)
         if libc.prctl(1, signal.SIGTERM) != 0:  # PR_SET_PDEATHSIG
             raise OSError(ctypes.get_errno(), 'Cannot set parent-death signal')
         if os.getppid() != parent_pid:
             raise SystemExit(1)
+
+
+def _wait_for_parent(sentinel):
+    from multiprocessing.connection import wait
+    wait([sentinel])
+    os._exit(1)
 
 
 class Dispatcher:
