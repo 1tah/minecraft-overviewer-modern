@@ -100,7 +100,9 @@ overviewer.util = {
                         var world = overviewer.current_world;
                         var layer = overviewer.current_layer[world];
                         var path = layer && layer.tileSetConfig ? layer.tileSetConfig.path : null;
-                        var view = overviewer.util.formatRenderProgress(data, world, path, Date.now()/1000);
+                        var view = overviewer.util.formatRenderProgress(data, world, path, Date.now()/1000, this.previousProgress);
+                        this.previousProgress = {run_id: data.run_id, renders: data.renders,
+                                                 current_render: view.current};
                         this.label.textContent = view.message;
                         this.progress.style.visibility = '';
                         this.bar.style.display = view.showBar === false ? 'none' : '';
@@ -860,24 +862,30 @@ overviewer.util = {
      * @param string pathBase
      * @param string pathExt
      */
-    'formatRenderProgress': function(data, world, path, now) {
+    'formatRenderProgress': function(data, world, path, now, previous) {
         if (data.version !== 2) {return {message: String(data.message || ''), percent: null, stale: false};}
         var stale = ['preparing', 'rendering'].indexOf(data.status) >= 0 && now-data.updated_at > 90;
         var total = data.total, done = data.done, eta = data.eta_seconds;
         // Always describe the whole run, even when the visible layer has no jobs.
-        var groups = new Map();
-        (data.renders || []).filter(function(row) {
+        var pending = (data.renders || []).filter(function(row) {
             return !row.skipped && row.done < row.total;
-        }).forEach(function(row) {
-            var name = row.world || 'Мир';
-            if (!groups.has(name)) {groups.set(name, []);}
-            var titles = groups.get(name);
-            var title = row.title || row.id;
-            if (titles.indexOf(title) < 0) {titles.push(title);}
         });
-        var targets = Array.from(groups, function(group) {
-            return group[0] + ' — ' + group[1].join(', ');
-        }).join('; ');
+        // The dispatcher interleaves layers. Show one with recent completed
+        // tiles instead of presenting every pending layer as currently active.
+        var current = null;
+        if (previous && previous.run_id === data.run_id) {
+            var previousRows = new Map((previous.renders || []).map(function(row) {return [row.id, row];}));
+            var largestChange = 0;
+            pending.forEach(function(row) {
+                var before = previousRows.get(row.id);
+                var change = before ? row.done-before.done : 0;
+                if (change > largestChange) {largestChange = change; current = row;}
+            });
+            if (!current && previous.current_render) {
+                current = pending.find(function(row) {return row.id === previous.current_render.id;});
+            }
+        }
+        var target = current ? (current.world || 'Мир')+' — '+(current.title || current.id) : '';
         var remaining = Math.max(0, total-done);
         var percent = total ? Math.min(100,100*done/total) : 100;
         var phase = data.phase;
@@ -892,7 +900,7 @@ overviewer.util = {
             return {message: prefix+'Готово: '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)',
                     percent: percent, stale: false, showBar: false};
         }
-        if (targets) {phase = phase === 'Рендер' ? 'Сейчас: '+targets : phase+' · Слои: '+targets;}
+        if (target) {phase = phase === 'Рендер' ? 'Активный слой: '+target : phase+' · Слой: '+target;}
         var message = prefix+phase+' · Готово '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)';
         if (remaining > 0) {
             message += ' · Осталось '+remaining+' тайлов';
@@ -900,7 +908,7 @@ overviewer.util = {
                 message += ' · Осталось '+(eta == null ? '—' : '~'+Math.ceil(eta/60)+' мин');
             }
         }
-        return {message: message, percent: percent, stale: stale,
+        return {message: message, percent: percent, stale: stale, current: current,
                 showBar: !stale && data.status === 'rendering' && remaining > 0};
     },
     'getTileUrlGenerator': function(path, pathBase, pathExt) {

@@ -150,9 +150,9 @@
     ".gitignore": "fb43d4004a148504d0abd329dd766e07d76a456313aeba7761795d11aec57b30",
     "ANALYSIS_RU.md": "9599050e890a0005f93b9afe986e2ef3ddcc5da1018a95d15ae96fc62424d96c",
     "BUILD_AND_RUN_RU.md": "487ea14cd47c69d2222c6c102def67e430370b72ee82a6f04983a444ac4e0c85",
-    "CONFIG_RU.md": "824e94c81fabc3b9511087b87caafb5010188f7a165a942d4c34535cb90dbc8e",
+    "CONFIG_RU.md": "4d6d529ff68beaee52222744f3a0c9a69462cd395df9221a1761f1791fba7e11",
     "MANIFEST.in": "446b213022a6303ca55fae268fd1fd81d7f143993008c93802e7b335277ac11b",
-    "README.md": "fe80c7ff37720ff3d5419284afb12c2ebbfae3f1aa1813160463cfd51fa71d0f",
+    "README.md": "6fc213be324f3b84f9b6082e431fe18ddb80c2f005a89ad45371d4dacc36e9a7",
     "README.rst": "4842e829629ab8dbf57beff04dbfa4cb8d4ec68351e268708236cd46629aa17d",
     "WSL_RUN_RU.md": "af45fabc7c5f225855ae4a1e023c18910303c489ac22253ea3b49de65f84bc13",
     "contrib/verify_modern_render.py": "0b78e7419eedc8837ce191cbba6077cd8f704e697343838374c08698b9221d51",
@@ -160,7 +160,7 @@
     "overviewer.py": "b6bc66c04761f873ffa4dcd6d7a8d577e348075fabb94e579815bac202daafd5",
     "overviewer_core/assetmanager.py": "90c98b2dc84c6f6804fe6d13a4ff27a06f999f681c4ded2713b8e3023091de2e",
     "overviewer_core/aux_files/genPOI.py": "00c88284e5f6f63670f51c3ff9361908039549dfea1593332828e51d544a654c",
-    "overviewer_core/data/js_src/util.js": "0a14c2349156f52e803ce8b25be112ed191e2e302d385b3a1b63f7065730017d",
+    "overviewer_core/data/js_src/util.js": "2355d6813c8af923815c1f50a77649223713e4616010d2c9f7a3e81921716f15",
     "overviewer_core/data/web_assets/overviewer.css": "bbb0fea4398f33293ebc2d275bc5e14f9d7df2232a5c12ab5a11cad8bc9c6ebd",
     "overviewer_core/dispatcher.py": "28b480133504859947469c9ed2066773353c2633e84b7ab73c480a87636bce9a",
     "overviewer_core/files.py": "d78681232a46917469aa1953649d2bc6a0d6f8afafcd4cdf8ac939477fabf6c6",
@@ -183,15 +183,15 @@
     "test/test_resource_models.py": "2c4c9069f8fa058e43393470950d366bc7aaa7738ddec83662390de9dd44e451",
     "test/test_tilelayout_recovery.py": "129bb2cd4b8bf47543a15d68b97b29768703092fc369dca6cb5a4dbe0053c1bf",
     "test/test_webprogress.py": "099087c33712915b3682b164c856387b7b90b23cf611938ac8a5efe11a60e52f",
-    "test/test_webprogress_js.cjs": "fc66dc601b2b1e5caf7ff6eea61a16feefe47df45ec5d8189a175733faec9ea9"
+    "test/test_webprogress_js.cjs": "33aff7d8e6173acc06919916dead29baece8c172ff8e6ceeae2d657f0abb7001"
   },
   "sha256_lf_utf8": {
     ".gitignore": "9759f1381a3b0ef6fbb7767a3acd919e168dfe4e94ea9397adf103abee664d37",
     "ANALYSIS_RU.md": "9599050e890a0005f93b9afe986e2ef3ddcc5da1018a95d15ae96fc62424d96c",
     "BUILD_AND_RUN_RU.md": "487ea14cd47c69d2222c6c102def67e430370b72ee82a6f04983a444ac4e0c85",
-    "CONFIG_RU.md": "5b40e9f529d181c87d8445ba61618b08d178dda7d77e9b22a856fefd3947506e",
+    "CONFIG_RU.md": "c54b2df33a2d1970b328ab249b10c0815f6a7d6864555b22558ea6a7758d528c",
     "MANIFEST.in": "5a46560174bd7cad1db7d9e784f804746f3b0cdf59a11c2d5a9760ea1ea1c001",
-    "README.md": "66aa47af34ffd3918fbbdb7b103c43c31a65aa55bde6b6d4661986060f58f450",
+    "README.md": "79a5fa3726bb62a67be5f287664db93ebc5619b6fdbeb2d7d975e525bf523f17",
     "README.rst": "5e88ad221bb6c8e042538b08dfacada066379d5e5bfbdcd1ee3faca09cb96a84",
     "WSL_RUN_RU.md": "af45fabc7c5f225855ae4a1e023c18910303c489ac22253ea3b49de65f84bc13",
     "contrib/verify_modern_render.py": "0b78e7419eedc8837ce191cbba6077cd8f704e697343838374c08698b9221d51",
@@ -199,7 +199,7 @@
     "overviewer.py": "b36f1e8118dcbf963ce0bd93f5d393e6a0934b136c573f0b7c6717cfc5c83c8d",
     "overviewer_core/assetmanager.py": "941b7bd9d4bf38645446104bd6b0edef6bf28d4b182c006c62b4f28301ccbf66",
     "overviewer_core/aux_files/genPOI.py": "586b299a52e8869016ac688a7cecf136f8099390d280613b5e8eed8e148655b8",
-    "overviewer_core/data/js_src/util.js": "4c0b6d5e890cf47b432be58e8495ff2256f4f383ebdf44bf928f090be945548e",
+    "overviewer_core/data/js_src/util.js": "b856c2695311d87617501ae3dc8daed9b596fa2a883040bde3e965f80a0b11cc",
     "overviewer_core/data/web_assets/overviewer.css": "9a59ed06b474d373e6b1735d4d847f6c160ff516fc5d4ccf5fdcc5c9d01b620a",
     "overviewer_core/dispatcher.py": "a728b4301d7b11cd3c061ab6f7b26d675d7829bd4c38abf771c0279b6eb81018",
     "overviewer_core/files.py": "ffa67b6766e61449fdbb4fdaaa936d48d4f16aef0268f8591ba5a27fff9aea6d",
@@ -222,7 +222,7 @@
     "test/test_resource_models.py": "2c4c9069f8fa058e43393470950d366bc7aaa7738ddec83662390de9dd44e451",
     "test/test_tilelayout_recovery.py": "129bb2cd4b8bf47543a15d68b97b29768703092fc369dca6cb5a4dbe0053c1bf",
     "test/test_webprogress.py": "099087c33712915b3682b164c856387b7b90b23cf611938ac8a5efe11a60e52f",
-    "test/test_webprogress_js.cjs": "5ef85cfbba97a966c02c7b0fdb535417b0144c2e05939dee10b9f8075ff569e3"
+    "test/test_webprogress_js.cjs": "bc62ff2aeb8210d8232f11d0e38d9d60bdbbec375fb4c3a6a1beff570e49927e"
   },
   "validation": {
     "platform": "Windows x64 / Python 3.12.14 / MSVC 14.44; Ubuntu 26.04.1 WSL2 / Python 3.14.4 / GCC 15.2; NumPy 2.3.5 / Pillow 12.3.0",
