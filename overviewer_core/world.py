@@ -1505,6 +1505,8 @@ class RegionSet(object):
         return "<RegionSet regiondir=%r>" % self.regiondir
 
     def _get_block(self, palette_entry):
+        from .palette26 import normalize
+        palette_entry = normalize(palette_entry)
         # Legacy invisible sentinels (99999) must never enter a uint16 palette.
         # NumPy 2 rejects the old overflowing assignment instead of wrapping it.
         if self._blockmap.get(palette_entry['Name'], (0, 0))[0] > 65535:

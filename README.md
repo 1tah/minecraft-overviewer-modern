@@ -1,11 +1,42 @@
 # Minecraft Overviewer: новые блоки, продолжение рендера и веб-прогресс
 
+## Готовый архив для Ubuntu 20.04 x86_64
+
+**[Скачать готовую сборку в Releases](https://github.com/1tah/minecraft-overviewer-modern/releases/latest)**.
+Выбирайте `CublayCraft-Overviewer-Ubuntu20.04-x86_64.tar.gz`.
+Внутри уже есть Python 3.12, зависимости, скомпилированный модуль и ваш configNew.py
+с 9 слоями и 282 маркерами. Системный Python 3.8 менять не нужно.
+
+```bash
+tar -xzf CublayCraft-Overviewer-Ubuntu20.04-x86_64.tar.gz
+cd CublayCraft-Overviewer
+# Положите миры в worlds/ или укажите свои пути в configNew.py.
+./START.sh
+```
+
+START.sh загрузит официальный клиент 1.21.5, если assets/client.jar отсутствует.
+Для 26.3 при отсутствии JAR: `MINECRAFT_VERSION=26.3 ./START.sh`.
+Исправление новой палитры 26.3 уже включено — отдельный патч не нужен.
+В worlds указывается корень с level.dat; каталог dimensions/minecraft выбирается
+генератором по dimension. Для объединённого мира автоматически находятся Nether/End,
+если отдельные каталоги сохранений отсутствуют.
+
+Привычный запуск: `./overviewer.py --config=./configNew.py -p=4 --memory-limit=8G`.
+Ограничение RAM на старой Ubuntu реализовано launcher через cgroup v1/v2 и может
+запросить sudo. Работники сохраняют UID пользователя; при недоступном контроллере
+памяти запуск без ограничения не выполняется.
+
+**Code → Download ZIP содержит исходники. Для запуска без сборки берите архив из Releases.**
+Все файлы этого комплекта и инструкция:
+[deploy/ubuntu20](deploy/ubuntu20/START_HERE_RU.md).
+Повторная сборка выполняется вручную через Actions → Build Ubuntu 20.04 ready archive.
+
 Исходники на базе GregoryAM-SP/The-Minecraft-Overviewer. Проверены рендер миров
 Java Edition 1.21.5, модели из клиентских JAR 26.3 и 26.4-snapshot-5, восстановление
 после остановки и лимит RAM в Ubuntu WSL2. Будущие версии с совместимым форматом
 моделей поддерживаются автоматически; специальные модели могут требовать доработки.
 
-## Скачать, собрать и запустить в Ubuntu / WSL2
+## Сборка из исходников в новой Ubuntu / WSL2
 
 Репозиторий приватный: используйте свой вход GitHub для клонирования либо
 **Code → Download ZIP** и откройте распакованный каталог в Ubuntu.

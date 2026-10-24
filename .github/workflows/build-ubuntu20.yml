@@ -1,0 +1,39 @@
+name: Build Ubuntu 20.04 ready archive
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: New release tag (must end with -ubuntu20)
+        required: true
+        default: v26.3-resume.5-ubuntu20
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate new release tag
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9A-Za-z._+-]+-ubuntu20$ ]]
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'This release already exists; choose a new tag.'
+            exit 1
+          fi
+      - name: Build and test inside Ubuntu 20.04
+        run: |
+          docker buildx build --platform linux/amd64 \
+            -f deploy/ubuntu20/Dockerfile --target artifact \
+            --build-arg SOURCE_REVISION="$GITHUB_SHA" \
+            --output type=local,dest=artifacts .
+      - name: Publish ready server archive
+        run: |
+          gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" \
+            --title "$RELEASE_TAG — Ubuntu 20.04 x86_64" \
+            --notes-file deploy/ubuntu20/RELEASE_NOTES_RU.md \
+            artifacts/CublayCraft-Overviewer-Ubuntu20.04-x86_64.tar.gz \
+            artifacts/CublayCraft-Overviewer-Ubuntu20.04-x86_64.tar.gz.sha256

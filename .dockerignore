@@ -1,0 +1,11 @@
+.git
+.venv
+build
+artifacts
+**/__pycache__
+**/.pytest_cache
+**/*.so
+**/*.pyd
+**/*.dll
+**/*.jar
+**/*.sqlite3

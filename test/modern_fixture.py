@@ -61,6 +61,12 @@ def make_world(root, jar_path, region=(0,0)):
         if properties:
             entry['Properties'] = (10, {k:(8,v) for k,v in properties.items()})
         palette.append(entry)
+    if modern:
+        # 26.3 uses lowercase fields and compact default states. Mixed NBT
+        # lists wrap scalar entries in a compound under the empty key.
+        palette = [({'id': entry['Name'], 'properties': entry['Properties']}
+                    if 'Properties' in entry else {'': entry['Name']})
+                   for entry in palette]
     bits = max(4, (len(palette)-1).bit_length())
     per_long = 64 // bits
     values = [0] * 4096

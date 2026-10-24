@@ -1,0 +1,9 @@
+certifi==2026.10.23
+charset-normalizer==3.5.2
+idna==3.20
+networkx==3.7
+numpy==2.3.5
+pillow==12.3.0
+requests==2.34.2
+setuptools==80.9.0
+urllib3==2.8.0

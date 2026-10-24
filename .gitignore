@@ -64,3 +64,6 @@ temp/
 
 # Pillow temporary files
 pillow-headers/
+!deploy/ubuntu20/START.sh
+!deploy/ubuntu20/pillow_include/*.h
+/artifacts/

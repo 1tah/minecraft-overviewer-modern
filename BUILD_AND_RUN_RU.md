@@ -1,5 +1,10 @@
 # Сборка и запуск доработанного Overviewer
 
+Для Ubuntu 20.04 с Python 3.8 используйте готовый архив из GitHub Releases:
+он содержит собственный Python и нативный модуль. Инструкция:
+[deploy/ubuntu20/START_HERE_RU.md](deploy/ubuntu20/START_HERE_RU.md).
+Ниже — сборка обычных исходников с современным Python.
+
 Быстрый запуск, пример конфигурации и просмотр карты во время генерации:
 [README.md](README.md). Веб-прогресс включён по умолчанию (`webprogress = True`),
 HTTP-сервер запускается отдельно. Для уже работающего Nginx достаточно раздавать
@@ -53,10 +58,11 @@ overviewer_core/renderjournal.py
 overviewer_core/resource_models.py
 overviewer_core/tilelayout.py
 overviewer_core/webprogress.py
+overviewer_core/palette26.py
 ```
 
 Файлы `test/*` и `contrib/verify_modern_render.py` нужны для проверок, а не
-для обычного запуска. Версия нашей сборки — `26.3+resume.4`; это номер сборки,
+для обычного запуска. Версия нашей сборки — `26.3+resume.5`; это номер сборки,
 а не гарантия поддержки произвольных будущих форматов Minecraft.
 В manifest `sha256` относится к байтам файлов архива, `sha256_lf_utf8` — к
 UTF-8-тексту после нормализации CRLF/LF; второе удобно при установке через
