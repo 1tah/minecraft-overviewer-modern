@@ -45,8 +45,8 @@
     "example_config.py": "7f031e56d3394fe015e5871dbd205dbc6beffb389208716115451ea90029c5ea",
     "overviewer.py": "b6bc66c04761f873ffa4dcd6d7a8d577e348075fabb94e579815bac202daafd5",
     "overviewer_core/assetmanager.py": "90c98b2dc84c6f6804fe6d13a4ff27a06f999f681c4ded2713b8e3023091de2e",
-    "overviewer_core/data/js_src/util.js": "75e2d02b9456908ef494ba2f3d936b1331c81302b2753e63e474afc2d0bd7b56",
-    "overviewer_core/data/web_assets/overviewer.css": "66182afedf14861b22d3d05c80fed2fada44c614f72e8f253b17381bcaa6b2c7",
+    "overviewer_core/data/js_src/util.js": "676a0f3c3624acf94493761c253925d34b6f069142d3eece20cd3b654c0d86c0",
+    "overviewer_core/data/web_assets/overviewer.css": "36b2aad79cc10aea551b891cfe48cdf69844343240e1e0c957321cee7514b534",
     "overviewer_core/dispatcher.py": "28b480133504859947469c9ed2066773353c2633e84b7ab73c480a87636bce9a",
     "overviewer_core/files.py": "d78681232a46917469aa1953649d2bc6a0d6f8afafcd4cdf8ac939477fabf6c6",
     "overviewer_core/memorylimit.py": "6ee88e10429e909d7e720aaf1849f118033dbcdd56440cca69ea11624074e91e",
@@ -64,7 +64,7 @@
     "test/test_resource_models.py": "2c4c9069f8fa058e43393470950d366bc7aaa7738ddec83662390de9dd44e451",
     "test/test_tilelayout_recovery.py": "129bb2cd4b8bf47543a15d68b97b29768703092fc369dca6cb5a4dbe0053c1bf",
     "test/test_webprogress.py": "099087c33712915b3682b164c856387b7b90b23cf611938ac8a5efe11a60e52f",
-    "test/test_webprogress_js.cjs": "2bd6e74a6526518a864131ada8950dcfb53e090b308fb33dd26b11ce60eab76d"
+    "test/test_webprogress_js.cjs": "2c7b24e59d8cad86e604c121a7b1b3e4d3752340cbdd9242288634a141dd0e37"
   },
   "sha256_lf_utf8": {
     ".gitignore": "9759f1381a3b0ef6fbb7767a3acd919e168dfe4e94ea9397adf103abee664d37",
@@ -76,8 +76,8 @@
     "example_config.py": "7f031e56d3394fe015e5871dbd205dbc6beffb389208716115451ea90029c5ea",
     "overviewer.py": "b36f1e8118dcbf963ce0bd93f5d393e6a0934b136c573f0b7c6717cfc5c83c8d",
     "overviewer_core/assetmanager.py": "941b7bd9d4bf38645446104bd6b0edef6bf28d4b182c006c62b4f28301ccbf66",
-    "overviewer_core/data/js_src/util.js": "e473ad49158d1cca94caf982a14be5d9263665c7af771b8a83033cfdefc6adc5",
-    "overviewer_core/data/web_assets/overviewer.css": "a56922aa5d98fa010b8126a74f7de0b3736c59303d244628fff9379e98e5b60f",
+    "overviewer_core/data/js_src/util.js": "a5f1fb84c1c71bc87f81932d456dc48e29c67e5b40618e60667fbde51c4ddbde",
+    "overviewer_core/data/web_assets/overviewer.css": "f4ff121802bfae2f1469686292a29be2337b84b85663a23d34e6c7df7ac4a221",
     "overviewer_core/dispatcher.py": "a728b4301d7b11cd3c061ab6f7b26d675d7829bd4c38abf771c0279b6eb81018",
     "overviewer_core/files.py": "ffa67b6766e61449fdbb4fdaaa936d48d4f16aef0268f8591ba5a27fff9aea6d",
     "overviewer_core/memorylimit.py": "6ee88e10429e909d7e720aaf1849f118033dbcdd56440cca69ea11624074e91e",
@@ -95,7 +95,7 @@
     "test/test_resource_models.py": "2c4c9069f8fa058e43393470950d366bc7aaa7738ddec83662390de9dd44e451",
     "test/test_tilelayout_recovery.py": "129bb2cd4b8bf47543a15d68b97b29768703092fc369dca6cb5a4dbe0053c1bf",
     "test/test_webprogress.py": "099087c33712915b3682b164c856387b7b90b23cf611938ac8a5efe11a60e52f",
-    "test/test_webprogress_js.cjs": "2bd6e74a6526518a864131ada8950dcfb53e090b308fb33dd26b11ce60eab76d"
+    "test/test_webprogress_js.cjs": "2c7b24e59d8cad86e604c121a7b1b3e4d3752340cbdd9242288634a141dd0e37"
   },
   "validation": {
     "platform": "Windows x64 / Python 3.12.14 / MSVC 14.44; Ubuntu 26.04.1 WSL2 / Python 3.14.4 / GCC 15.2; NumPy 2.3.5 / Pillow 12.3.0",

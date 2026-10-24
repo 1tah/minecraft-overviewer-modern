@@ -182,7 +182,7 @@ div.worldcontrol select {
 
 .leaflet-container .ov-live-progress {
     box-sizing: border-box;
-    width: min(940px, calc(100vw - 22px));
+    width: max-content;
     max-width: calc(100vw - 22px);
     padding: 4px 8px;
     margin: 3px 8px;

@@ -103,6 +103,7 @@ overviewer.util = {
                         var view = overviewer.util.formatRenderProgress(data, world, path, Date.now()/1000);
                         this.label.textContent = view.message;
                         this.progress.style.visibility = '';
+                        this.bar.style.display = view.showBar === false ? 'none' : '';
                         if (view.percent == null) {this.bar.removeAttribute('value');}
                         else {this.bar.value = view.percent;}
                         nextPoll = Math.max(1000, Math.min(10000, Number(data.update) || 2000));
@@ -243,7 +244,7 @@ overviewer.util = {
         overviewer.map = L.map('mcmap', {crs: L.CRS.Simple});
 
         overviewer.map.attributionControl.setPrefix(
-            '<a href="https://overviewer.gregoryam.com/" target="blank">Overviewer</a> | <a href="https://leafletjs.com/">Leaflet</a>');
+            '<a href="https://leafletjs.com/">Leaflet</a>');
 
         if (overviewerConfig['map']['attribution'] != null) {
             overviewer.map.attributionControl.addAttribution(overviewerConfig['map']['attribution']);
@@ -881,10 +882,16 @@ overviewer.util = {
         else if (data.status === 'rendering' && remaining === 0) {phase = 'Готово';}
         var prefix = world ? world + ' · ' : '';
         if (!data.config_ready) {return {message: prefix+phase, percent: null, stale: stale};}
+        if (!stale && !skipped && (data.status === 'complete' ||
+            (data.status === 'rendering' && remaining === 0))) {
+            return {message: prefix+'Готово: '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)',
+                    percent: percent, stale: false, showBar: false};
+        }
         var message = prefix+phase+' · Готово '+done+' из '+total+' тайлов ('+percent.toFixed(1)+'%)'+
                       ' · Осталось '+remaining+' тайлов · Осталось '+
                       (eta == null ? '—' : '~'+Math.ceil(eta/60)+' мин');
-        return {message: message, percent: percent, stale: stale};
+        return {message: message, percent: percent, stale: stale,
+                showBar: !stale && data.status === 'rendering' && !skipped};
     },
     'getTileUrlGenerator': function(path, pathBase, pathExt) {
         return function(o) {

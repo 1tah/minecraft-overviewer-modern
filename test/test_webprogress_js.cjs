@@ -19,7 +19,11 @@ assert.equal(util.formatRenderProgress(data, 'CublayCraft-Nether', 'nether', 109
 data.renders[0].initial_done = 7599;
 assert.match(util.formatRenderProgress(data, 'CublayCraft-Nether', 'nether', 1001).message, /Осталось —$/);
 data.renders[0].done = 229780;
-assert.match(util.formatRenderProgress(data, 'CublayCraft-Nether', 'nether', 1001).message, /· Готово ·/);
+view = util.formatRenderProgress(data, 'CublayCraft-Nether', 'nether', 1001);
+assert.equal(view.message, 'CublayCraft-Nether · Готово: 229780 из 229780 тайлов (100.0%)');
+assert.equal(view.showBar, false);
+data.status = 'complete';
+assert.equal(util.formatRenderProgress(data, 'CublayCraft-Nether', 'nether', 1001).showBar, false);
 data.status = 'interrupted';
 data.phase = 'Прервано';
 assert.equal(util.formatRenderProgress(data, null, null, 2000).stale, false);
