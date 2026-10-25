@@ -33,9 +33,14 @@ def pressure_sample(path, unified, usage):
 
 def install_legacy():
     """Patch the old controller in memory, without changing hashed core files."""
+    import sys
     from overviewer_core import adaptive
     if hasattr(adaptive.CgroupMemory, 'pressure_sample'):
         return  # Current builds already use the native implementation.
+    # Older default-observer code checks the abbreviated flag literally.
+    # Add it before config parsing to keep pool messages off a terminal bar.
+    if not any(flag in sys.argv for flag in ('--fixed-resources', '--genpoi', '--simple')):
+        sys.argv.append('--simple')
     original = adaptive.ResourcePolicy.decide
     if getattr(original, '_cache_aware', False):
         return

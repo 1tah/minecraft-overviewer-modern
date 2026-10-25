@@ -129,8 +129,9 @@ class LoggingObserver(Observer):
 
     def finish(self):
         self.fake.finish()
-        logging.info("Rendered %d of %d.  %d%% complete.  %s",
+        logging.info("Rendered %d of %d.  %.2f%% complete.  %.2f t/s.  %s",
                      self.get_max_value(), self.get_max_value(), 100.0,
+                     self.fake.currval/self.fake.seconds_elapsed if self.fake.seconds_elapsed > 0 else 0,
                      self.eta.update(self.fake))
         super(LoggingObserver, self).finish()
 
@@ -139,9 +140,11 @@ class LoggingObserver(Observer):
         self.fake.update(current_value)
 
         if self._need_update():
-            logging.info("Rendered %d of %d.  %d%% complete.  %s",
+            logging.info("Rendered %d of %d.  %.2f%% complete.  %.2f t/s.  %s",
                          self.get_current_value(), self.get_max_value(),
-                         self.get_percentage(), self.eta.update(self.fake))
+                         self.get_percentage(),
+                         self.fake.currval/self.fake.seconds_elapsed if self.fake.seconds_elapsed > 0 else 0,
+                         self.eta.update(self.fake))
             self.last_update = current_value
             return True
         return False

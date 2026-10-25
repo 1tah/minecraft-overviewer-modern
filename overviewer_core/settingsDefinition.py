@@ -110,7 +110,10 @@ def get_default_config():
     conf['webprogress'] = Setting(required=False, validator=validateBool, default=True)
 
     # TODO clean up this ugly in sys.argv hack
-    if platform.system() == 'Windows' or not sys.stdout.isatty() or "--simple" in sys.argv:
+    # Pool resize messages are ordinary log lines; an interactive carriage-return
+    # bar cannot safely share the terminal with them (including SSH terminals).
+    if (platform.system() == 'Windows' or not sys.stdout.isatty() or
+            any(flag in sys.argv for flag in ('--simple', '--simple-output', '--auto-resources'))):
         obs = LoggingObserver()
     else:
         obs = ProgressBarObserver(fd=sys.stdout)

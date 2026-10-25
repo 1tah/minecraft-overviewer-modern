@@ -60,9 +60,11 @@ def test_nonreclaimable_pressure_still_shrinks_pool(tmp_path):
 
 
 def test_legacy_patch_is_idempotent_and_leaves_core_files_unchanged(tmp_path, monkeypatch):
+    import sys
     from overviewer_core import adaptive
     core = Path(adaptive.__file__)
     before = core.read_bytes()
+    monkeypatch.setattr(sys, 'argv', ['overviewer.py', '--auto-resources'])
     monkeypatch.delattr(CgroupMemory, 'pressure_sample')
     monkeypatch.setattr(ResourcePolicy, 'decide', ResourcePolicy.decide)
     (tmp_path/'memory.limit_in_bytes').write_text(str(10*1024**3))
@@ -72,6 +74,7 @@ def test_legacy_patch_is_idempotent_and_leaves_core_files_unchanged(tmp_path, mo
     patched = ResourcePolicy.decide
     install_legacy()
     assert ResourcePolicy.decide is patched
+    assert sys.argv.count('--simple') == 1
     policy = ResourcePolicy(10*1024**3, 10)
     assert policy.decide(10158833664, 1, False, False, 1507392*1024, 0) == 'grow'
     assert core.read_bytes() == before
