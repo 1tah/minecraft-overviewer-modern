@@ -3,8 +3,10 @@ include README.rst
 include CONTRIBUTORS.rst
 include overviewer.py
 include overviewer_cache_policy.py
+include overviewer_worker_start.py
 include CACHE_FIX_RU.md
 include RESOURCE_CONTROL_RU.md
+include START_WORKERS_RU.md
 include contribManager.py
 include sample_config.py
 include example_config.py

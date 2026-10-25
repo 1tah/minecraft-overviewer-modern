@@ -5,7 +5,7 @@ on:
       release_tag:
         description: New release tag (must end with -ubuntu20)
         required: true
-        default: v26.3-resume.11-ubuntu20
+        default: v26.3-resume.12-ubuntu20
 permissions:
   contents: write
 jobs:
@@ -37,4 +37,5 @@ jobs:
             --notes-file deploy/ubuntu20/RELEASE_NOTES_RU.md \
             artifacts/CublayCraft-Overviewer-Ubuntu20.04-x86_64.tar.gz \
             artifacts/CublayCraft-Overviewer-Ubuntu20.04-x86_64.tar.gz.sha256 \
-            artifacts/fix_memory_cache.py
+            artifacts/fix_memory_cache.py \
+            artifacts/fix_start_workers.py

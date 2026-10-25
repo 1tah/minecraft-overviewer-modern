@@ -12,6 +12,8 @@ from .dispatcher import Dispatcher, follow_parent
 from .resource_session import atomic_json, read_state
 from .signals import Signal
 from overviewer_cache_policy import pressure_sample
+from overviewer_worker_start import (validate_start_workers, spawn_snapshot_worker,
+                                    complete_initial_pool, close_worker_snapshot)
 
 MIB = 1024**2
 
@@ -102,10 +104,14 @@ def adaptive_worker(connection, tilesets, parent):
 
 
 class AdaptiveDispatcher(Dispatcher):
-    def __init__(self, maximum, outputdir, memory=None, context=None, interval=1.0, cooldown=10):
+    supports_start_workers = True
+
+    def __init__(self, maximum, outputdir, memory=None, context=None, interval=1.0, cooldown=10, start_workers=None):
         super().__init__()
         self.memory = memory or CgroupMemory()
         self.requested_maximum = maximum
+        self.initial_workers_requested = validate_start_workers(start_workers, maximum)
+        self.initial_workers_started = 0
         self.maximum = max(1, min(maximum, int(os.environ.get('OVERVIEWER_WORKER_CEILING', maximum))))
         self.outputdir = str(outputdir)
         self.context = context or multiprocessing.get_context('forkserver')
@@ -151,14 +157,10 @@ class AdaptiveDispatcher(Dispatcher):
             self.start_target = self.recommended
         if any((ts.get_phase_length(p) or 0) for ts in tilesets for p in range(ts.get_num_phases())):
             self._spawn()
+        complete_initial_pool(self, self.initial_workers_requested)
 
     def _spawn(self):
-        parent, child = self.context.Pipe()
-        process = self.context.Process(target=adaptive_worker, args=(child, self.tilesets, os.getpid()))
-        self.slots.append(dict(process=process, pipe=parent, ready=False, job=None, retiring=False, closing=False))
-        self._event('start')
-        process.start()
-        child.close()
+        spawn_snapshot_worker(self)
 
     def _event(self, action):
         self.events.append(dict(seconds=time.monotonic()-self.started, action=action, workers=len(self.slots)))
@@ -287,6 +289,7 @@ class AdaptiveDispatcher(Dispatcher):
             min_workers=self.min_workers, max_workers_observed=self.max_observed,
             worker_seconds=self.worker_seconds, render_seconds=elapsed,
             busy_worker_seconds=self.busy_worker_seconds, profile_start_target=self.start_target,
+            initial_workers_requested=self.initial_workers_requested, initial_workers_started=self.initial_workers_started,
             completed_this_attempt=self.completed, peak_memory_bytes=self.peak,
             recommended_workers=max(1, self.recommended if self.best_rate or not self.completed else self.max_observed),
             cpu_ids=sorted(os.sched_getaffinity(0)), events=self.events, memory_accounting=self.memory_sample)
@@ -314,6 +317,7 @@ class AdaptiveDispatcher(Dispatcher):
             slot['pipe'].close()
         self.slots = []
         self.closed = True
+        close_worker_snapshot(self)
 
     def abort(self):
         self.failed_workers = len(self.slots)
@@ -326,6 +330,7 @@ class AdaptiveDispatcher(Dispatcher):
             slot['pipe'].close()
         self.slots = []
         self.closed = True
+        close_worker_snapshot(self)
 
     def _sample_before_abort(self):
         self.closed = True

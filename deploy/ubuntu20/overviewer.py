@@ -67,11 +67,17 @@ def main():
     options = argparse.ArgumentParser(add_help=False)
     options.add_argument('--cpu-limit', type=int)
     options.add_argument('-p', '--processes', dest='workers', type=int)
+    options.add_argument('--start-workers', type=int)
     opts, _ = options.parse_known_args(forwarded)
     automatic = '--fixed-resources' not in forwarded and '--genpoi' not in forwarded
     cpu_request = opts.cpu_limit if opts.cpu_limit is not None else (opts.workers if automatic and opts.workers and opts.workers > 0 else None)
     cpus = pin_cpus(cpu_request)
     maximum = min(len(cpus), opts.workers) if opts.workers and opts.workers > 0 else len(cpus)
+    if opts.start_workers is not None:
+        if not automatic:
+            raise ValueError('--start-workers requires automatic rendering')
+        if not 1 <= opts.start_workers <= maximum:
+            raise ValueError('--start-workers must be between 1 and %d' % maximum)
     if automatic:
         if '--auto-resources' not in forwarded:
             forwarded.append('--auto-resources')

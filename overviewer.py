@@ -97,6 +97,7 @@ def main():
     parser.add_argument("--pid", dest="pid", action="store", help="Specify the pid file to use.")
     parser.add_argument('--memory-limit', help='Hard total memory limit, e.g. 8G (Linux cgroup).')
     parser.add_argument('--cpu-limit', type=int, help='Maximum logical CPUs; affinity applies to all render workers.')
+    parser.add_argument('--start-workers', type=int, help='Initial parallel workers in auto mode; clamped on OOM retry.')
     resource_mode = parser.add_mutually_exclusive_group()
     resource_mode.add_argument('--auto-resources', action='store_true', help='Adjust worker count to the verified memory budget.')
     resource_mode.add_argument('--fixed-resources', action='store_true', help='Use the requested fixed worker count.')
@@ -158,7 +159,18 @@ def main():
                           help="When running GenPOI, don't scan player data.")
 
     args, unknowns = parser.parse_known_args()
-    if args.memory_limit and not args.fixed_resources and not args.genpoi and not args.auto_resources:
+    if args.start_workers is not None:
+        if args.fixed_resources or args.genpoi:
+            parser.error('--start-workers requires automatic rendering, without --fixed-resources/--genpoi')
+        if args.start_workers < 1:
+            parser.error('--start-workers must be positive')
+        allowed = len(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else os.cpu_count() or 1
+        for cap in (args.cpu_limit, args.procs):
+            if cap is not None and cap > 0:
+                allowed = min(allowed, cap)
+        if args.start_workers > allowed:
+            parser.error('--start-workers exceeds CPU/-p maximum (%d)' % allowed)
+    if (args.memory_limit or args.start_workers is not None) and not args.fixed_resources and not args.genpoi and not args.auto_resources:
         args.auto_resources = True
         sys.argv.append('--auto-resources')
     if args.cpu_limit is not None:
@@ -717,7 +729,7 @@ def main():
         allowed = pin_cpus(args.cpu_limit or (args.procs if args.procs and args.procs > 0 else None))
         maximum = min(len(allowed), args.procs) if args.procs and args.procs > 0 else len(allowed)
         os.environ.update(OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='1', MKL_NUM_THREADS='1')
-        dispatch = AdaptiveDispatcher(maximum, destdir)
+        dispatch = AdaptiveDispatcher(maximum, destdir, start_workers=args.start_workers)
     elif config['processes'] == 1:
         dispatch = dispatcher.Dispatcher()
     else:
