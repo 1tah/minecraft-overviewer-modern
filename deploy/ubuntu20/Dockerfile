@@ -9,6 +9,7 @@ RUN /opt/portable-python/bin/python3 -m pip install --only-binary=:all: \
     -r deploy/ubuntu20/requirements.lock.txt
 RUN CC=gcc CXX=g++ PIL_INCLUDE_DIR=/src/deploy/ubuntu20/pillow_include \
     /opt/portable-python/bin/python3 setup.py build
+RUN /opt/portable-python/bin/python3 -c "from pathlib import Path; assert any(Path('build').glob('lib*/overviewer_cache_policy.py'))"
 RUN /opt/portable-python/bin/python3 -m pip install --target=/tmp/testdeps pytest pytest-mock && \
     PYTHONPATH=/tmp/testdeps /opt/portable-python/bin/python3 -m pytest -q
 ARG SOURCE_REVISION=unknown

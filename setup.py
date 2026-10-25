@@ -148,6 +148,7 @@ if py2app is not None:
 #
 
 setup_kwargs['packages'] = ['overviewer_core', 'overviewer_core/aux_files']
+setup_kwargs['py_modules'] = ['overviewer_cache_policy']
 setup_kwargs['scripts'] = ['overviewer.py']
 setup_kwargs['package_data'] = {'overviewer_core': recursive_package_data('data/textures') + recursive_package_data('data/web_assets') + recursive_package_data('data/js_src')}
 
