@@ -946,6 +946,10 @@ overviewer.util = {
                 if (data.status === 'rendering') {parts.push('Осталось '+overviewer.util.formatRemainingTime(eta));}
             }
             if (resourceText) {parts.push(resourceText.slice(3).replace(' (запуск ', ' (+'));}
+            if (active && Number.isFinite(resources.memory_working_bytes)) {
+                view.message += ' · Рабочая память '+gib(resources.memory_working_bytes)+' ГиБ'+
+                    ' · Потенциально освобождаемый кэш '+gib(resources.memory_reclaimable_bytes || 0)+' ГиБ';
+            }
             if (data.status === 'complete' && total && resources.workers_peak > 0) {
                 parts.push('Воркеры: до '+resources.workers_peak);
             }

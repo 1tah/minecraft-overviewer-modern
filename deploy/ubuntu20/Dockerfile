@@ -15,6 +15,8 @@ ARG SOURCE_REVISION=unknown
 RUN /opt/portable-python/bin/python3 deploy/ubuntu20/build_artifact.py \
     --source /src --runtime /opt/portable-python --output /out --revision "$SOURCE_REVISION"
 RUN /out/CublayCraft-Overviewer/overviewer.py --version
+RUN /opt/portable-python/bin/python3 deploy/ubuntu20/make_cache_hotfix.py /out/fix_memory_cache.py
 FROM scratch AS artifact
 COPY --from=build /out/CublayCraft-Overviewer-Ubuntu20.04-x86_64.tar.gz /
 COPY --from=build /out/CublayCraft-Overviewer-Ubuntu20.04-x86_64.tar.gz.sha256 /
+COPY --from=build /out/fix_memory_cache.py /

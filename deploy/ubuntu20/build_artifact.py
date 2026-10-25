@@ -59,6 +59,7 @@ info = dict(source_commit=args.revision, version=version, built_for='Ubuntu 20.0
             python_runtime=json.loads((deploy/'runtime-python.json').read_text()), dependencies=dependencies,
             palette_26_3_hotfix_included=True, includes_user_worlds=False, includes_mojang_assets=False,
             adaptive_resource_control=True,
+            cache_aware_memory_control=True,
             cgroup_v1_note='Supported interface; not tested on the target server kernel.')
 if args.reports:
     shutil.copytree(args.reports, bundle/'reports')

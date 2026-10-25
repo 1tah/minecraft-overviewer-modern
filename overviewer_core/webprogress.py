@@ -116,6 +116,10 @@ setTimeout(tick,2000);}tick();
                 self.memory_peak = max(self.memory_peak, used, self.memory.peak_usage())
                 result.update(memory_used_bytes=used, memory_limit_bytes=self.memory.limit,
                               memory_peak_bytes=self.memory_peak)
+                if hasattr(self.memory, 'pressure_sample'):
+                    sample = self.memory.pressure_sample(used)
+                    result.update(memory_working_bytes=sample['working_bytes'],
+                                  memory_reclaimable_bytes=sample['reclaimable_bytes'])
             except (OSError, ValueError):
                 pass
         if self.state in TERMINAL:

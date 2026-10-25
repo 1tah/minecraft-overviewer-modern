@@ -97,3 +97,8 @@ assert.equal(util.formatElapsedTime(60), '1 мин 0 с');
 assert.equal(util.formatElapsedTime(3661), '01:01:01');
 assert.equal(util.formatElapsedTime(null), '');
 console.log('Explicit tile labels and completed render duration/RAM/worker summary: passed');
+const cacheView = format({...liveResources, resources:{...liveResources.resources,
+    memory_working_bytes:2*1073741824,memory_reclaimable_bytes:1.25*1073741824}},null,null,1001);
+assert.match(cacheView.message, /Рабочая память 2.0 ГиБ/);
+assert.match(cacheView.message, /Потенциально освобождаемый кэш 1.3 ГиБ/);
+assert.doesNotMatch(cacheView.details, /Потенциально/);

@@ -77,6 +77,8 @@ def test_live_resources_refresh_without_tile_completion_and_clear_on_stop(tmp_pa
         used = 3*1024**3
         def usage(self): return self.used
         def peak_usage(self): return 4*1024**3
+        def pressure_sample(self, used):
+            return dict(working_bytes=used-1024**3, reclaimable_bytes=1024**3)
     progress = WebProgress(tmp_path, heartbeat=False)
     progress.memory = memory = Memory()
     workers = dict(workers_current=3, workers_busy=2, workers_starting=1, worker_limit=12)
@@ -85,6 +87,8 @@ def test_live_resources_refresh_without_tile_completion_and_clear_on_stop(tmp_pa
         first = json.loads(progress.path.read_text(encoding='utf-8'))['resources']
         assert first['memory_used_bytes'] == 3*1024**3
         assert first['memory_limit_bytes'] == 10*1024**3
+        assert first['memory_working_bytes'] == 2*1024**3
+        assert first['memory_reclaimable_bytes'] == 1024**3
         assert first['workers_current'] == 3 and first['workers_starting'] == 1
         memory.used = 2*1024**3
         workers.update(workers_current=2, workers_starting=0)

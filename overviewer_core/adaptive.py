@@ -11,6 +11,7 @@ import traceback
 from .dispatcher import Dispatcher, follow_parent
 from .resource_session import atomic_json, read_state
 from .signals import Signal
+from overviewer_cache_policy import pressure_sample
 
 MIB = 1024**2
 
@@ -38,6 +39,9 @@ class CgroupMemory:
     def peak_usage(self):
         path = self.path/('memory.peak' if self.v2 else 'memory.max_usage_in_bytes')
         return int(path.read_text()) if path.exists() else self.usage()
+
+    def pressure_sample(self, usage=None):
+        return pressure_sample(self.path, self.v2, self.usage() if usage is None else usage)
 
 
 def worker_rss(pid):
@@ -124,6 +128,7 @@ class AdaptiveDispatcher(Dispatcher):
         self.recommended = 1
         self.best_rate = 0
         self.failed_workers = 0
+        self.memory_sample = {}
         self.first_ready = None
         self.initialization_seconds = 1.0
         self.window = (self.started, 0, 0)
@@ -158,8 +163,11 @@ class AdaptiveDispatcher(Dispatcher):
     def _event(self, action):
         self.events.append(dict(seconds=time.monotonic()-self.started, action=action, workers=len(self.slots)))
         self.events = self.events[-256:]
-        logging.info('Auto resources: %s; workers=%s/%s, RAM=%.0f/%.0f MiB', action, len(self.slots),
-                     self.maximum, self.memory.usage()/MIB, self.memory.limit/MIB)
+        used = self.memory.usage()
+        sample = self.memory.pressure_sample(used) if hasattr(self.memory, 'pressure_sample') else {}
+        logging.info('Auto resources: %s; workers=%s/%s, RAM=%.0f/%.0f MiB; working=%.0f, clean inactive cache=%.0f MiB',
+                     action, len(self.slots), self.maximum, used/MIB, self.memory.limit/MIB,
+                     sample.get('working_bytes', used)/MIB, sample.get('reclaimable_bytes', 0)/MIB)
         self.checkpoint()
 
     def _retire(self):
@@ -188,12 +196,15 @@ class AdaptiveDispatcher(Dispatcher):
             return
         self.last_sample = now
         usage = self.memory.usage()
+        self.memory_sample = self.memory.pressure_sample(usage) if hasattr(self.memory, 'pressure_sample') else dict(
+            usage_bytes=usage, working_bytes=usage, reclaimable_bytes=0)
+        working = self.memory_sample['working_bytes']
         self.peak = max(self.peak, usage)
         estimate = max([64*MIB]+[worker_rss(slot['process'].pid) for slot in self.slots])
         starting = any(not s['ready'] for s in self.slots)
         retiring = any(s['retiring'] for s in self.slots)
         self.policy.cooldown = min(2, self.cooldown) if len(self.slots) < self.start_target else self.cooldown
-        action = None if self.closed or self.completed >= self.total else self.policy.decide(usage, len(self.slots), starting, retiring, estimate, now)
+        action = None if self.closed or self.completed >= self.total else self.policy.decide(working, len(self.slots), starting, retiring, estimate, now)
         if action == 'shrink':
             self._retire()
         elif action == 'grow':
@@ -207,7 +218,7 @@ class AdaptiveDispatcher(Dispatcher):
             count = self.completed-self.window[1]
             if elapsed >= 15 and count >= 20:
                 rate = count/elapsed
-                if rate > self.best_rate and usage < self.memory.limit*0.82:
+                if rate > self.best_rate and working < self.memory.limit*0.82:
                     self.best_rate, self.recommended = rate, ready
                 self.window = (now, self.completed, ready)
         else:
@@ -278,7 +289,7 @@ class AdaptiveDispatcher(Dispatcher):
             busy_worker_seconds=self.busy_worker_seconds, profile_start_target=self.start_target,
             completed_this_attempt=self.completed, peak_memory_bytes=self.peak,
             recommended_workers=max(1, self.recommended if self.best_rate or not self.completed else self.max_observed),
-            cpu_ids=sorted(os.sched_getaffinity(0)), events=self.events)
+            cpu_ids=sorted(os.sched_getaffinity(0)), events=self.events, memory_accounting=self.memory_sample)
         if self.state:
             atomic_json(self.state, report)
         return report
